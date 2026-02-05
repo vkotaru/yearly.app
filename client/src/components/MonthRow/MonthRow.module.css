@@ -109,7 +109,8 @@
   overflow: hidden;
   border-radius: 3px;
   margin: 1px 0;
-  transition: filter 0.1s ease;
+  transition: filter 0.1s ease, opacity 0.2s ease;
+  position: relative;
 }
 
 .entryCell:hover {
@@ -123,4 +124,33 @@
   overflow: hidden;
   text-overflow: ellipsis;
   letter-spacing: 0.1px;
+}
+
+/* ── URL link icon ── */
+.linkIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  color: inherit;
+  opacity: 0.5;
+  transition: opacity 0.12s ease;
+}
+
+.linkIcon:hover {
+  opacity: 1;
+}
+
+/* ── Resize handle on right edge ── */
+.resizeHandle {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
 }

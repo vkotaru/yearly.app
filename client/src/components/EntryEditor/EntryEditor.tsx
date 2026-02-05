@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import type { Entry, CreateEntryDto, UpdateEntryDto } from '../../../../shared/types';
+import type { Entry, Comment, CreateEntryDto, UpdateEntryDto } from '../../../../shared/types';
+import { fetchComments, createComment, deleteComment } from '../../api/entries';
 import { getDaysInMonth, getMonthName } from '../../utils/calendar';
 import styles from './EntryEditor.module.css';
 
@@ -24,17 +25,33 @@ export default function EntryEditor({
   year, month, dayStart, dayEnd, rowIndex, existingEntry, onSave, onDelete, onClose,
 }: Props) {
   const maxDay = getDaysInMonth(year, month);
-  const [text, setText] = useState(existingEntry?.text ?? '');
+  const [title, setTitle] = useState(existingEntry?.title ?? '');
+  const [description, setDescription] = useState(existingEntry?.description ?? '');
+  const [url, setUrl] = useState(existingEntry?.url ?? '');
+  const [category, setCategory] = useState(existingEntry?.category ?? '');
   const [color, setColor] = useState(existingEntry?.color ?? '#3b82f6');
   const [hexInput, setHexInput] = useState(existingEntry?.color ?? '#3b82f6');
   const [dStart, setDStart] = useState(existingEntry?.day_start ?? dayStart);
   const [dEnd, setDEnd] = useState(existingEntry?.day_end ?? dayEnd);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [newComment, setNewComment] = useState('');
+  const [loadingComments, setLoadingComments] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
+
+  useEffect(() => {
+    if (existingEntry) {
+      setLoadingComments(true);
+      fetchComments(existingEntry.id)
+        .then(setComments)
+        .catch(console.error)
+        .finally(() => setLoadingComments(false));
+    }
+  }, [existingEntry]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -71,7 +88,10 @@ export default function EntryEditor({
     if (existingEntry) {
       onSave({
         id: existingEntry.id,
-        text,
+        title,
+        description,
+        url,
+        category,
         color,
         day_start: start,
         day_end: end,
@@ -83,10 +103,25 @@ export default function EntryEditor({
         day_start: start,
         day_end: end,
         row_index: rowIndex,
-        text,
+        title,
+        description,
+        url,
+        category,
         color,
       });
     }
+  }
+
+  async function handleAddComment() {
+    if (!newComment.trim() || !existingEntry) return;
+    const comment = await createComment(existingEntry.id, newComment.trim());
+    setComments(prev => [...prev, comment]);
+    setNewComment('');
+  }
+
+  async function handleDeleteComment(commentId: number) {
+    await deleteComment(commentId);
+    setComments(prev => prev.filter(c => c.id !== commentId));
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -110,10 +145,35 @@ export default function EntryEditor({
           ref={inputRef}
           type="text"
           className={styles.textInput}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Entry text (optional)..."
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Title (optional)..."
         />
+
+        <textarea
+          className={styles.descInput}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Description (optional)..."
+          rows={2}
+        />
+
+        <div className={styles.fieldRow}>
+          <input
+            type="text"
+            className={styles.textInput}
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="URL (optional)..."
+          />
+          <input
+            type="text"
+            className={styles.textInput}
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            placeholder="Category (optional)..."
+          />
+        </div>
 
         <div className={styles.rangeRow}>
           <label className={styles.field}>
@@ -176,6 +236,52 @@ export default function EntryEditor({
             </div>
           </div>
         </div>
+
+        {existingEntry && (
+          <div className={styles.commentsSection}>
+            <span className={styles.commentsLabel}>Comments</span>
+            {loadingComments ? (
+              <div className={styles.commentsLoading}>Loading...</div>
+            ) : (
+              <>
+                <div className={styles.commentsList}>
+                  {comments.map(c => (
+                    <div key={c.id} className={styles.commentItem}>
+                      <div className={styles.commentBody}>
+                        <span className={styles.commentText}>{c.text}</span>
+                        <span className={styles.commentMeta}>
+                          {c.author && `${c.author} · `}
+                          {new Date(c.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <button
+                        className={styles.commentDeleteBtn}
+                        onClick={() => handleDeleteComment(c.id)}
+                        title="Delete comment"
+                      >&times;</button>
+                    </div>
+                  ))}
+                </div>
+                <div className={styles.commentInputRow}>
+                  <input
+                    type="text"
+                    className={styles.textInput}
+                    value={newComment}
+                    onChange={e => setNewComment(e.target.value)}
+                    placeholder="Add a comment..."
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.stopPropagation();
+                        handleAddComment();
+                      }
+                    }}
+                  />
+                  <button className={styles.commentAddBtn} onClick={handleAddComment}>Add</button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
 
         <div className={styles.actions}>
           {existingEntry && onDelete && (

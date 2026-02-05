@@ -1,10 +1,18 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import type { Entry, CreateEntryDto, UpdateEntryDto } from '../../../../shared/types';
 import { fetchEntries, createEntry, updateEntry, deleteEntry } from '../../api/entries';
+import { getDaysInMonth } from '../../utils/calendar';
 import MonthRow from '../MonthRow/MonthRow';
 import type { DragState } from '../MonthRow/MonthRow';
 import EntryEditor from '../EntryEditor/EntryEditor';
+import CategoryFilter from '../CategoryFilter/CategoryFilter';
 import styles from './YearGrid.module.css';
+
+export interface ResizeState {
+  entry: Entry;
+  originalDayEnd: number;
+  currentDayEnd: number;
+}
 
 interface EditorState {
   month: number;
@@ -26,7 +34,11 @@ export default function YearGrid({ year }: Props) {
   const [editor, setEditor] = useState<EditorState | null>(null);
   const [drag, setDrag] = useState<DragState | null>(null);
   const [highlightedCol, setHighlightedCol] = useState<number | null>(null);
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [resize, setResize] = useState<ResizeState | null>(null);
   const isDragging = useRef(false);
+  const isResizing = useRef(false);
+  const gridRef = useRef<HTMLDivElement>(null);
 
   const loadEntries = useCallback(async () => {
     const data = await fetchEntries(year);
@@ -37,9 +49,18 @@ export default function YearGrid({ year }: Props) {
     loadEntries();
   }, [loadEntries]);
 
-  // Global mouseup to finish drag
+  // Global mouseup to finish drag or resize
   useEffect(() => {
     function handleMouseUp() {
+      if (isResizing.current && resize) {
+        isResizing.current = false;
+        if (resize.currentDayEnd !== resize.originalDayEnd) {
+          updateEntry(resize.entry.id, { day_end: resize.currentDayEnd })
+            .then(() => loadEntries());
+        }
+        setResize(null);
+        return;
+      }
       if (isDragging.current && drag) {
         isDragging.current = false;
         const lo = Math.min(drag.dayStart, drag.dayEnd);
@@ -55,7 +76,24 @@ export default function YearGrid({ year }: Props) {
     }
     window.addEventListener('mouseup', handleMouseUp);
     return () => window.removeEventListener('mouseup', handleMouseUp);
-  }, [drag]);
+  }, [drag, resize, loadEntries]);
+
+  // Global mousemove during resize — compute day from pixel position
+  useEffect(() => {
+    if (!resize) return;
+    function handleMouseMove(e: MouseEvent) {
+      if (!isResizing.current || !resize || !gridRef.current) return;
+      const gridRect = gridRef.current.getBoundingClientRect();
+      const xInGrid = e.clientX - gridRect.left - 72; // 72px month label
+      if (xInGrid < 0) return;
+      const day = Math.floor(xInGrid / 40) + 1;
+      const maxDay = getDaysInMonth(year, resize.entry.month);
+      const clampedDay = Math.max(resize.entry.day_start, Math.min(day, maxDay));
+      setResize(prev => prev ? { ...prev, currentDayEnd: clampedDay } : null);
+    }
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, [resize, year]);
 
   function handleCellMouseDown(month: number, day: number, rowIndex: number) {
     isDragging.current = true;
@@ -70,12 +108,22 @@ export default function YearGrid({ year }: Props) {
   }
 
   function handleEntryClick(entry: Entry) {
+    if (isResizing.current) return;
     setEditor({
       month: entry.month,
       dayStart: entry.day_start,
       dayEnd: entry.day_end,
       rowIndex: entry.row_index,
       entry,
+    });
+  }
+
+  function handleResizeStart(entry: Entry) {
+    isResizing.current = true;
+    setResize({
+      entry,
+      originalDayEnd: entry.day_end,
+      currentDayEnd: entry.day_end,
     });
   }
 
@@ -100,6 +148,16 @@ export default function YearGrid({ year }: Props) {
     setEditor(null);
   }
 
+  const categories = useMemo(() => {
+    const cats = new Set(entries.map(e => e.category).filter(Boolean));
+    return Array.from(cats).sort();
+  }, [entries]);
+
+  const filteredEntryIds = useMemo(() => {
+    if (!activeCategory) return null;
+    return new Set(entries.filter(e => e.category === activeCategory).map(e => e.id));
+  }, [entries, activeCategory]);
+
   const entriesByMonth = entries.reduce<Record<number, Entry[]>>((acc, e) => {
     (acc[e.month] ??= []).push(e);
     return acc;
@@ -107,7 +165,12 @@ export default function YearGrid({ year }: Props) {
 
   return (
     <div className={styles.wrapper}>
-      <div className={styles.grid}>
+      <CategoryFilter
+        categories={categories}
+        activeCategory={activeCategory}
+        onSelect={setActiveCategory}
+      />
+      <div className={styles.grid} ref={gridRef}>
         {/* Header row */}
         <div className={styles.headerLabel}>Month</div>
         {Array.from({ length: 31 }, (_, i) => {
@@ -135,10 +198,13 @@ export default function YearGrid({ year }: Props) {
               minRows={monthRows[month] || 3}
               drag={drag}
               highlightedCol={highlightedCol}
+              filteredEntryIds={filteredEntryIds}
+              resize={resize}
               onCellMouseDown={handleCellMouseDown}
               onCellMouseEnter={handleCellMouseEnter}
               onEntryClick={handleEntryClick}
               onAddRow={handleAddRow}
+              onResizeStart={handleResizeStart}
             />
           );
         })}

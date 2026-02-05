@@ -58,6 +58,41 @@
   background: #fff;
 }
 
+/* ── Description textarea ── */
+.descInput {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  margin-bottom: 14px;
+  box-sizing: border-box;
+  background: #f8fafc;
+  transition: all 0.15s ease;
+  resize: vertical;
+  min-height: 40px;
+}
+
+.descInput:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  background: #fff;
+}
+
+/* ── Side-by-side field row ── */
+.fieldRow {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 0;
+}
+
+.fieldRow .textInput {
+  flex: 1;
+  min-width: 0;
+}
+
 /* ── Day range fields ── */
 .field {
   display: flex;
@@ -244,4 +279,104 @@
 
 .deleteBtn:hover {
   background: #fef2f2 !important;
+}
+
+/* ── Comments section ── */
+.commentsSection {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.commentsLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.commentsLoading {
+  font-size: 12px;
+  color: #94a3b8;
+  padding: 8px 0;
+}
+
+.commentsList {
+  max-height: 160px;
+  overflow-y: auto;
+  margin-bottom: 8px;
+}
+
+.commentItem {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.commentBody {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.commentText {
+  font-size: 13px;
+  color: #334155;
+  word-break: break-word;
+}
+
+.commentMeta {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.commentDeleteBtn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.commentDeleteBtn:hover {
+  color: #ef4444;
+  background: #fef2f2;
+}
+
+.commentInputRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.commentInputRow .textInput {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.commentAddBtn {
+  padding: 7px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: all 0.12s ease;
+}
+
+.commentAddBtn:hover {
+  background: #e2e8f0;
 }
