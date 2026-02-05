@@ -1,7 +1,8 @@
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.35);
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(2px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -10,94 +11,110 @@
 
 .editor {
   background: #fff;
-  border-radius: 8px;
-  padding: 20px;
-  min-width: 320px;
-  max-width: 400px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  padding: 22px;
+  min-width: 340px;
+  max-width: 420px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.05);
 }
 
 .titleRow {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
 
 .titleRow h3 {
   margin: 0;
-  font-size: 15px;
-  color: #1e293b;
+  font-size: 16px;
+  font-weight: 600;
+  color: #0f172a;
 }
 
 .spanLabel {
   font-size: 12px;
-  color: #64748b;
+  color: #94a3b8;
   font-weight: 500;
 }
 
+/* ── Text input ── */
 .textInput {
   width: 100%;
-  padding: 7px 10px;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
+  padding: 9px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
   font-size: 14px;
   outline: none;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
   box-sizing: border-box;
+  background: #f8fafc;
+  transition: all 0.15s ease;
 }
 
 .textInput:focus {
   border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  background: #fff;
 }
 
+/* ── Day range fields ── */
 .field {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
 }
 
 .field span {
   font-size: 11px;
   font-weight: 600;
-  color: #64748b;
+  color: #94a3b8;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .field input[type="number"] {
-  padding: 5px 8px;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
+  padding: 7px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
   font-size: 13px;
   outline: none;
-  width: 60px;
+  width: 70px;
+  background: #f8fafc;
+  transition: all 0.15s ease;
 }
 
 .field input[type="number"]:focus {
   border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  background: #fff;
 }
 
 .rangeRow {
   display: flex;
   gap: 12px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
+/* ── Color section ── */
 .colorSection {
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
 .colorLabel {
   font-size: 11px;
   font-weight: 600;
-  color: #64748b;
+  color: #94a3b8;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   display: block;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
+}
+
+.colorRow {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .colorGrid {
@@ -108,35 +125,84 @@
 }
 
 .colorSwatch {
-  width: 22px;
-  height: 22px;
-  border-radius: 4px;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
   border: 2px solid transparent;
   cursor: pointer;
   padding: 0;
+  transition: all 0.12s ease;
+}
+
+.colorSwatch:hover {
+  transform: scale(1.12);
 }
 
 .colorSwatch.selected {
-  border-color: #1e293b;
-  box-shadow: 0 0 0 2px #fff, 0 0 0 3px #1e293b;
+  border-color: #0f172a;
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px #0f172a;
 }
 
-.customColor {
-  width: 22px;
-  height: 22px;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
+/* ── Custom color row: picker + hex input ── */
+.customColorRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nativePicker {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
   cursor: pointer;
-  padding: 0;
+  padding: 1px;
+  background: #f8fafc;
 }
 
+.hexInputWrap {
+  display: flex;
+  align-items: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f8fafc;
+  transition: all 0.15s ease;
+}
+
+.hexInputWrap:focus-within {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  background: #fff;
+}
+
+.hexPreview {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  margin-left: 6px;
+  flex-shrink: 0;
+}
+
+.hexInput {
+  width: 80px;
+  padding: 6px 8px;
+  border: none;
+  outline: none;
+  font-size: 13px;
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  background: transparent;
+  color: #334155;
+}
+
+/* ── Action buttons ── */
 .actions {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 14px;
-  padding-top: 10px;
-  border-top: 1px solid #e2e8f0;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid #f1f5f9;
 }
 
 .rightActions {
@@ -146,12 +212,14 @@
 }
 
 .actions button {
-  padding: 5px 14px;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
+  padding: 7px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
   background: #fff;
   cursor: pointer;
   font-size: 13px;
+  font-weight: 500;
+  transition: all 0.12s ease;
 }
 
 .cancelBtn:hover {
@@ -166,6 +234,7 @@
 
 .saveBtn:hover {
   background: #2563eb !important;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
 }
 
 .deleteBtn {

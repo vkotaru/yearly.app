@@ -8,37 +8,40 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  font-weight: 700;
+  gap: 4px;
+  font-weight: 600;
   font-size: 12px;
+  letter-spacing: 0.3px;
   color: #fff;
-  background: #00897b;
-  border-right: 2px solid #333;
-  border-bottom: 1px solid #333;
-  padding: 2px 4px;
+  background: linear-gradient(180deg, #26a69a 0%, #00897b 100%);
+  border-right: 1px solid rgba(0, 0, 0, 0.12);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 4px 6px;
   position: sticky;
   left: 0;
   z-index: 2;
 }
 
 .addRowBtn {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  background: transparent;
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.1);
   cursor: pointer;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1;
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(255, 255, 255, 0.75);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0;
+  transition: all 0.15s ease;
 }
 
 .addRowBtn:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.7);
   color: #fff;
 }
 
@@ -49,10 +52,11 @@
 
 /* ── Cells ── */
 .cell {
-  height: 22px;
-  border-right: 1px solid #ccc;
-  border-bottom: 1px solid #ccc;
+  height: var(--grid-cell-height, 24px);
+  border-right: 1px solid #e8ecf0;
+  border-bottom: 1px solid #e8ecf0;
   box-sizing: border-box;
+  transition: background 0.1s ease;
 }
 
 .emptyCell {
@@ -60,32 +64,32 @@
 }
 
 .emptyCell:hover {
-  background: #e3f2fd;
+  background: #dbeafe;
 }
 
-/* Weekend: light lavender like the sheet */
+/* Weekend: soft lavender */
 .weekend {
-  background: #d5c8e8;
+  background: #ede7f6;
 }
 
 .weekend:hover {
-  background: #c4b3db;
+  background: #d1c4e9;
 }
 
-/* Invalid days: dark gray */
+/* Invalid days: muted gray */
 .invalid {
-  background: #888;
+  background: #cfd8dc;
   cursor: default;
 }
 
-/* ── Month separator: thicker bottom border on the last row of each month ── */
+/* ── Month separator ── */
 .lastRow {
-  border-bottom: 2px solid #333;
+  border-bottom: 2px solid #b0bec5;
 }
 
 /* ── Drag selection highlight ── */
 .selecting {
-  background: #bbdefb !important;
+  background: #90caf9 !important;
   outline: 2px solid #1976d2;
   outline-offset: -2px;
 }
@@ -95,18 +99,22 @@
   cursor: pointer;
   display: flex;
   align-items: center;
-  padding: 0 3px;
+  padding: 0 5px;
   overflow: hidden;
+  border-radius: 3px;
+  margin: 1px 0;
+  transition: filter 0.1s ease;
 }
 
 .entryCell:hover {
-  filter: brightness(0.92);
+  filter: brightness(0.9);
 }
 
 .entryText {
-  font-size: 10px;
+  font-size: calc(var(--font-size, 13px) - 2px);
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  letter-spacing: 0.1px;
 }

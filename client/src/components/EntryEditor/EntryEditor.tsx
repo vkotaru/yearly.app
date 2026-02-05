@@ -6,7 +6,6 @@ import styles from './EntryEditor.module.css';
 const PRESET_COLORS = [
   '#ef4444', '#f97316', '#f59e0b', '#22c55e',
   '#3b82f6', '#8b5cf6', '#ec4899', '#06b6d4',
-  '#84cc16', '#14b8a6', '#6366f1', '#e11d48',
 ];
 
 interface Props {
@@ -27,6 +26,7 @@ export default function EntryEditor({
   const maxDay = getDaysInMonth(year, month);
   const [text, setText] = useState(existingEntry?.text ?? '');
   const [color, setColor] = useState(existingEntry?.color ?? '#3b82f6');
+  const [hexInput, setHexInput] = useState(existingEntry?.color ?? '#3b82f6');
   const [dStart, setDStart] = useState(existingEntry?.day_start ?? dayStart);
   const [dEnd, setDEnd] = useState(existingEntry?.day_end ?? dayEnd);
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -42,7 +42,6 @@ export default function EntryEditor({
         onClose();
       }
     }
-    // Delay to avoid the mouseup from drag triggering close immediately
     const timer = setTimeout(() => {
       document.addEventListener('mousedown', handleClickOutside);
     }, 100);
@@ -51,6 +50,20 @@ export default function EntryEditor({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [onClose]);
+
+  function selectColor(c: string) {
+    setColor(c);
+    setHexInput(c);
+  }
+
+  function handleHexChange(value: string) {
+    setHexInput(value);
+    // Accept 3 or 6 digit hex (with or without #)
+    const cleaned = value.startsWith('#') ? value : `#${value}`;
+    if (/^#([0-9a-fA-F]{3}){1,2}$/.test(cleaned)) {
+      setColor(cleaned);
+    }
+  }
 
   function handleSave() {
     const start = Math.min(dStart, dEnd);
@@ -127,22 +140,40 @@ export default function EntryEditor({
 
         <div className={styles.colorSection}>
           <span className={styles.colorLabel}>Color</span>
-          <div className={styles.colorGrid}>
-            {PRESET_COLORS.map((c) => (
-              <button
-                key={c}
-                className={`${styles.colorSwatch} ${c === color ? styles.selected : ''}`}
-                style={{ backgroundColor: c }}
-                onClick={() => setColor(c)}
+          <div className={styles.colorRow}>
+            <div className={styles.colorGrid}>
+              {PRESET_COLORS.map((c) => (
+                <button
+                  key={c}
+                  className={`${styles.colorSwatch} ${c === color ? styles.selected : ''}`}
+                  style={{ backgroundColor: c }}
+                  onClick={() => selectColor(c)}
+                />
+              ))}
+            </div>
+            <div className={styles.customColorRow}>
+              <input
+                type="color"
+                value={color}
+                onChange={(e) => selectColor(e.target.value)}
+                className={styles.nativePicker}
+                title="Pick custom color"
               />
-            ))}
-            <input
-              type="color"
-              value={color}
-              onChange={(e) => setColor(e.target.value)}
-              className={styles.customColor}
-              title="Custom color"
-            />
+              <div className={styles.hexInputWrap}>
+                <div
+                  className={styles.hexPreview}
+                  style={{ backgroundColor: color }}
+                />
+                <input
+                  type="text"
+                  value={hexInput}
+                  onChange={(e) => handleHexChange(e.target.value)}
+                  className={styles.hexInput}
+                  placeholder="#3b82f6"
+                  spellCheck={false}
+                />
+              </div>
+            </div>
           </div>
         </div>
 

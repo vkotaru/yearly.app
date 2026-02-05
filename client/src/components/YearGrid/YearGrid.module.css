@@ -1,6 +1,6 @@
 .wrapper {
   overflow-x: auto;
-  padding: 8px;
+  padding: 16px;
   user-select: none;
 }
 
@@ -8,38 +8,44 @@
   display: grid;
   grid-template-columns: 72px repeat(31, 40px);
   width: fit-content;
-  border-left: 1px solid #333;
-  border-top: 1px solid #333;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  background: #fff;
 }
 
 /* ── Header row ── */
 .headerLabel {
-  font-weight: 700;
-  font-size: 12px;
+  font-weight: 600;
+  font-size: 11px;
   color: #fff;
-  background: #f57c00;
-  padding: 4px 6px;
+  background: linear-gradient(180deg, #fb923c 0%, #f57c00 100%);
+  padding: 6px 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-right: 1px solid #333;
-  border-bottom: 2px solid #333;
+  border-right: 1px solid rgba(0, 0, 0, 0.12);
+  border-bottom: 2px solid #e67200;
   position: sticky;
   left: 0;
   z-index: 3;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .headerDay {
-  font-weight: 700;
+  font-weight: 600;
   font-size: 12px;
-  color: #333;
-  background: #f57c00;
-  padding: 4px 0;
+  color: #fff;
+  background: linear-gradient(180deg, #fb923c 0%, #f57c00 100%);
+  padding: 6px 0;
   text-align: center;
-  border-right: 1px solid #333;
-  border-bottom: 2px solid #333;
+  border-right: 1px solid rgba(0, 0, 0, 0.08);
+  border-bottom: 2px solid #e67200;
 }
 
 .headerWeekend {
-  background: #ccc;
+  background: linear-gradient(180deg, #b0bec5 0%, #90a4ae 100%);
+  border-bottom-color: #78909c;
 }

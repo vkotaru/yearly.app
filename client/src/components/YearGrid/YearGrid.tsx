@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Entry, CreateEntryDto, UpdateEntryDto } from '../../../../shared/types';
-import { isWeekend } from '../../utils/calendar';
 import { fetchEntries, createEntry, updateEntry, deleteEntry } from '../../api/entries';
 import MonthRow from '../MonthRow/MonthRow';
 import type { DragState } from '../MonthRow/MonthRow';
@@ -110,18 +109,11 @@ export default function YearGrid({ year }: Props) {
       <div className={styles.grid}>
         {/* Header row */}
         <div className={styles.headerLabel}>Month</div>
-        {Array.from({ length: 31 }, (_, i) => {
-          const day = i + 1;
-          const weekend = isWeekend(year, 1, day);
-          return (
-            <div
-              key={i}
-              className={`${styles.headerDay} ${weekend ? styles.headerWeekend : ''}`}
-            >
-              {day}
-            </div>
-          );
-        })}
+        {Array.from({ length: 31 }, (_, i) => (
+          <div key={i} className={styles.headerDay}>
+            {i + 1}
+          </div>
+        ))}
 
         {/* 12 month rows */}
         {Array.from({ length: 12 }, (_, i) => {
