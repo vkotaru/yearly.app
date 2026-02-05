@@ -25,6 +25,7 @@ export default function YearGrid({ year }: Props) {
   );
   const [editor, setEditor] = useState<EditorState | null>(null);
   const [drag, setDrag] = useState<DragState | null>(null);
+  const [highlightedCol, setHighlightedCol] = useState<number | null>(null);
   const isDragging = useRef(false);
 
   const loadEntries = useCallback(async () => {
@@ -109,11 +110,18 @@ export default function YearGrid({ year }: Props) {
       <div className={styles.grid}>
         {/* Header row */}
         <div className={styles.headerLabel}>Month</div>
-        {Array.from({ length: 31 }, (_, i) => (
-          <div key={i} className={styles.headerDay}>
-            {i + 1}
-          </div>
-        ))}
+        {Array.from({ length: 31 }, (_, i) => {
+          const day = i + 1;
+          return (
+            <div
+              key={i}
+              className={`${styles.headerDay} ${highlightedCol === day ? styles.headerDayActive : ''}`}
+              onClick={() => setHighlightedCol(highlightedCol === day ? null : day)}
+            >
+              {day}
+            </div>
+          );
+        })}
 
         {/* 12 month rows */}
         {Array.from({ length: 12 }, (_, i) => {
@@ -126,6 +134,7 @@ export default function YearGrid({ year }: Props) {
               entries={entriesByMonth[month] || []}
               minRows={monthRows[month] || 3}
               drag={drag}
+              highlightedCol={highlightedCol}
               onCellMouseDown={handleCellMouseDown}
               onCellMouseEnter={handleCellMouseEnter}
               onEntryClick={handleEntryClick}

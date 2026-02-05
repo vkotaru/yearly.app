@@ -17,6 +17,7 @@ interface Props {
   entries: Entry[];
   minRows: number;
   drag: DragState | null;
+  highlightedCol: number | null;
   onCellMouseDown: (month: number, day: number, rowIndex: number) => void;
   onCellMouseEnter: (month: number, day: number, rowIndex: number) => void;
   onEntryClick: (entry: Entry) => void;
@@ -24,7 +25,7 @@ interface Props {
 }
 
 export default function MonthRow({
-  year, month, entries, minRows, drag,
+  year, month, entries, minRows, drag, highlightedCol,
   onCellMouseDown, onCellMouseEnter, onEntryClick, onAddRow,
 }: Props) {
   const daysInMonth = getDaysInMonth(year, month);
@@ -76,6 +77,8 @@ export default function MonthRow({
               const weekend = isValid && isWeekend(year, month, day);
               const slot = isValid && di < row.length ? row[di] : null;
 
+              const isHighlighted = highlightedCol === day;
+
               if (!isValid) {
                 return (
                   <div
@@ -119,6 +122,7 @@ export default function MonthRow({
                     styles.emptyCell,
                     weekend ? styles.weekend : '',
                     inDrag ? styles.selecting : '',
+                    isHighlighted ? styles.colHighlight : '',
                     isLast ? styles.lastRow : '',
                   ].filter(Boolean).join(' ')}
                   onMouseDown={() => onCellMouseDown(month, day, ri)}

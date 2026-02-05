@@ -87,6 +87,12 @@
   border-bottom: 2px solid #b0bec5;
 }
 
+/* ── Column highlight (click header day) ── */
+.colHighlight {
+  background: #dbeafe !important;
+  border-right-color: #93c5fd;
+}
+
 /* ── Drag selection highlight ── */
 .selecting {
   background: #90caf9 !important;
