@@ -1,0 +1,45 @@
+.wrapper {
+  overflow-x: auto;
+  padding: 8px;
+  user-select: none;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 72px repeat(31, 40px);
+  width: fit-content;
+  border-left: 1px solid #333;
+  border-top: 1px solid #333;
+}
+
+/* ── Header row ── */
+.headerLabel {
+  font-weight: 700;
+  font-size: 12px;
+  color: #fff;
+  background: #f57c00;
+  padding: 4px 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid #333;
+  border-bottom: 2px solid #333;
+  position: sticky;
+  left: 0;
+  z-index: 3;
+}
+
+.headerDay {
+  font-weight: 700;
+  font-size: 12px;
+  color: #333;
+  background: #f57c00;
+  padding: 4px 0;
+  text-align: center;
+  border-right: 1px solid #333;
+  border-bottom: 2px solid #333;
+}
+
+.headerWeekend {
+  background: #ccc;
+}

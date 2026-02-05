@@ -1,0 +1,112 @@
+.monthRow {
+  display: contents;
+}
+
+/* ── Month label (teal, spans all rows for the month) ── */
+.monthLabel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-weight: 700;
+  font-size: 12px;
+  color: #fff;
+  background: #00897b;
+  border-right: 2px solid #333;
+  border-bottom: 1px solid #333;
+  padding: 2px 4px;
+  position: sticky;
+  left: 0;
+  z-index: 2;
+}
+
+.addRowBtn {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: transparent;
+  cursor: pointer;
+  font-size: 11px;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.addRowBtn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+/* ── Entry rows ── */
+.entryRow {
+  display: contents;
+}
+
+/* ── Cells ── */
+.cell {
+  height: 22px;
+  border-right: 1px solid #ccc;
+  border-bottom: 1px solid #ccc;
+  box-sizing: border-box;
+}
+
+.emptyCell {
+  cursor: crosshair;
+}
+
+.emptyCell:hover {
+  background: #e3f2fd;
+}
+
+/* Weekend: light lavender like the sheet */
+.weekend {
+  background: #d5c8e8;
+}
+
+.weekend:hover {
+  background: #c4b3db;
+}
+
+/* Invalid days: dark gray */
+.invalid {
+  background: #888;
+  cursor: default;
+}
+
+/* ── Month separator: thicker bottom border on the last row of each month ── */
+.lastRow {
+  border-bottom: 2px solid #333;
+}
+
+/* ── Drag selection highlight ── */
+.selecting {
+  background: #bbdefb !important;
+  outline: 2px solid #1976d2;
+  outline-offset: -2px;
+}
+
+/* ── Entry cells ── */
+.entryCell {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 0 3px;
+  overflow: hidden;
+}
+
+.entryCell:hover {
+  filter: brightness(0.92);
+}
+
+.entryText {
+  font-size: 10px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
