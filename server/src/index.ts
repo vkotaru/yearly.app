@@ -40,9 +40,15 @@ app.use('/api/entries', entriesRouter);
 // In production, serve the built frontend
 if (process.env.NODE_ENV === 'production') {
   const clientDist = path.join(__dirname, '../../client/dist');
+  console.log('Serving static files from:', clientDist);
   app.use(express.static(clientDist));
+  // SPA fallback - only for non-API routes
   app.get('*', (_req, res) => {
-    res.sendFile(path.join(clientDist, 'index.html'));
+    if (_req.path.startsWith('/api')) {
+      res.status(404).json({ error: 'Not found' });
+    } else {
+      res.sendFile(path.join(clientDist, 'index.html'));
+    }
   });
 }
 
