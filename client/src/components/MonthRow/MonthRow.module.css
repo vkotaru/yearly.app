@@ -2,47 +2,49 @@
   display: contents;
 }
 
-/* ── Month label (teal, spans all rows for the month) ── */
+/* ── Month label (emerald accent, spans all rows) ── */
 .monthLabel {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 6px;
   font-weight: 600;
-  font-size: 12px;
-  letter-spacing: 0.3px;
-  color: #fff;
-  background: linear-gradient(180deg, #26a69a 0%, #00897b 100%);
-  border-right: 1px solid rgba(0, 0, 0, 0.12);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-  padding: 4px 6px;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  color: var(--text-inverse);
+  background: linear-gradient(180deg, var(--success-500) 0%, var(--success-600) 100%);
+  border-right: 1px solid rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  padding: 6px 8px;
   position: sticky;
   left: 0;
   z-index: 2;
+  text-transform: uppercase;
 }
 
 .addRowBtn {
   width: 18px;
   height: 18px;
-  border-radius: 50%;
-  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  border-radius: var(--radius-full);
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
   background: rgba(255, 255, 255, 0.1);
   cursor: pointer;
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1;
-  color: rgba(255, 255, 255, 0.75);
+  color: rgba(255, 255, 255, 0.7);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0;
-  transition: all 0.15s ease;
+  transition: var(--transition-normal);
 }
 
 .addRowBtn:hover {
   background: rgba(255, 255, 255, 0.25);
-  border-color: rgba(255, 255, 255, 0.7);
+  border-color: rgba(255, 255, 255, 0.6);
   color: #fff;
+  transform: scale(1.1);
 }
 
 /* ── Entry rows ── */
@@ -53,10 +55,10 @@
 /* ── Cells ── */
 .cell {
   height: var(--grid-cell-height, 24px);
-  border-right: 1px solid #e8ecf0;
-  border-bottom: 1px solid #e8ecf0;
+  border-right: 1px solid var(--border-default);
+  border-bottom: 1px solid var(--border-default);
   box-sizing: border-box;
-  transition: background 0.1s ease;
+  transition: background var(--transition-fast);
 }
 
 .emptyCell {
@@ -64,39 +66,45 @@
 }
 
 .emptyCell:hover {
-  background: #dbeafe;
+  background: var(--accent-50);
 }
 
-/* Weekend: soft lavender */
+/* Weekend: soft purple tint */
 .weekend {
-  background: #ede7f6;
+  background: var(--accent-50);
 }
 
 .weekend:hover {
-  background: #d1c4e9;
+  background: var(--accent-100);
 }
 
-/* Invalid days: muted gray */
+/* Invalid days: striped pattern */
 .invalid {
-  background: #cfd8dc;
+  background: repeating-linear-gradient(
+    45deg,
+    var(--neutral-100),
+    var(--neutral-100) 4px,
+    var(--neutral-200) 4px,
+    var(--neutral-200) 8px
+  );
   cursor: default;
 }
 
 /* ── Month separator ── */
 .lastRow {
-  border-bottom: 2px solid #b0bec5;
+  border-bottom: 2px solid var(--border-strong);
 }
 
 /* ── Column highlight (click header day) ── */
 .colHighlight {
-  background: #dbeafe !important;
-  border-right-color: #93c5fd;
+  background: var(--accent-100) !important;
+  border-right-color: var(--accent-200);
 }
 
 /* ── Drag selection highlight ── */
 .selecting {
-  background: #90caf9 !important;
-  outline: 2px solid #1976d2;
+  background: var(--accent-200) !important;
+  outline: 2px solid var(--accent-500);
   outline-offset: -2px;
 }
 
@@ -105,20 +113,24 @@
   cursor: grab;
   display: flex;
   align-items: center;
-  padding: 0 5px;
+  padding: 0 6px;
   overflow: hidden;
-  border-radius: 3px;
-  margin: 1px 0;
-  transition: filter 0.1s ease, opacity 0.2s ease;
+  border-radius: var(--radius-sm);
+  margin: 1px 1px;
+  transition: filter var(--transition-fast), opacity var(--transition-normal), transform var(--transition-fast);
   position: relative;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .entryCell:hover {
-  filter: brightness(0.9);
+  filter: brightness(0.95);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
 }
 
 .entryCell:active {
   cursor: grabbing;
+  transform: translateY(0);
 }
 
 .entryText {
@@ -139,10 +151,10 @@
   flex-shrink: 0;
   width: 14px;
   height: 14px;
-  border-radius: 2px;
+  border-radius: 3px;
   color: inherit;
-  opacity: 0.5;
-  transition: opacity 0.12s ease;
+  opacity: 0.4;
+  transition: opacity var(--transition-fast);
 }
 
 .linkIcon:hover {

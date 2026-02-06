@@ -7,9 +7,15 @@ export interface Settings {
 }
 
 const FONT_OPTIONS = [
-  { label: 'Forum', value: "'Forum', serif" },
+  { label: 'Geist Sans', value: "'Geist', sans-serif" },
   { label: 'Inter', value: "'Inter', sans-serif" },
-  { label: 'Source Sans Pro', value: "'Source Sans Pro', sans-serif" },
+  { label: 'DM Sans', value: "'DM Sans', sans-serif" },
+  { label: 'Space Grotesk', value: "'Space Grotesk', sans-serif" },
+  { label: 'Outfit', value: "'Outfit', sans-serif" },
+  { label: 'Manrope', value: "'Manrope', sans-serif" },
+  { label: 'Poppins', value: "'Poppins', sans-serif" },
+  { label: 'Plus Jakarta Sans', value: "'Plus Jakarta Sans', sans-serif" },
+  { label: 'Geist Mono', value: "'Geist Mono', monospace" },
   { label: 'JetBrains Mono', value: "'JetBrains Mono', monospace" },
   { label: 'System Default', value: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" },
 ] as const;
@@ -17,7 +23,7 @@ const FONT_OPTIONS = [
 export { FONT_OPTIONS };
 
 const DEFAULT_SETTINGS: Settings = {
-  fontFamily: "'Forum', serif",
+  fontFamily: "'Geist', sans-serif",
   fontSize: 13,
   gridCellSize: 24,
 };

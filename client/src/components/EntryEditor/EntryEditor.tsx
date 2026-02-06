@@ -4,10 +4,67 @@ import { fetchComments, createComment, deleteComment } from '../../api/entries';
 import { getDaysInMonth, getMonthName } from '../../utils/calendar';
 import styles from './EntryEditor.module.css';
 
+// Modern color palette with softer, more sophisticated tones
 const PRESET_COLORS = [
-  '#ef4444', '#f97316', '#f59e0b', '#22c55e',
-  '#3b82f6', '#8b5cf6', '#ec4899', '#06b6d4',
+  '#f43f5e', // rose
+  '#fb923c', // orange
+  '#facc15', // amber
+  '#4ade80', // emerald
+  '#2dd4bf', // teal
+  '#38bdf8', // sky
+  '#818cf8', // indigo
+  '#c084fc', // purple
+  '#f472b6', // pink
+  '#a3a3a3', // neutral
 ];
+
+// Convert hex to RGB object
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!result) {
+    // Try 3-digit hex
+    const short = /^#?([a-f\d])([a-f\d])([a-f\d])$/i.exec(hex);
+    if (short) {
+      return {
+        r: parseInt(short[1] + short[1], 16),
+        g: parseInt(short[2] + short[2], 16),
+        b: parseInt(short[3] + short[3], 16),
+      };
+    }
+    return null;
+  }
+  return {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16),
+  };
+}
+
+// Convert RGB to hex
+function rgbToHex(r: number, g: number, b: number): string {
+  return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
+}
+
+// Parse any color format to { hex, opacity }
+function parseColor(color: string): { hex: string; opacity: number } {
+  // Check for rgba format
+  const rgbaMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+  if (rgbaMatch) {
+    const hex = rgbToHex(+rgbaMatch[1], +rgbaMatch[2], +rgbaMatch[3]);
+    const opacity = rgbaMatch[4] !== undefined ? parseFloat(rgbaMatch[4]) : 1;
+    return { hex, opacity };
+  }
+  // Default to hex with full opacity
+  return { hex: color.startsWith('#') ? color : `#${color}`, opacity: 1 };
+}
+
+// Build rgba string from hex and opacity
+function buildColorString(hex: string, opacity: number): string {
+  if (opacity >= 1) return hex;
+  const rgb = hexToRgb(hex);
+  if (!rgb) return hex;
+  return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})`;
+}
 
 interface Props {
   year: number;
@@ -29,8 +86,15 @@ export default function EntryEditor({
   const [description, setDescription] = useState(existingEntry?.description ?? '');
   const [url, setUrl] = useState(existingEntry?.url ?? '');
   const [category, setCategory] = useState(existingEntry?.category ?? '');
-  const [color, setColor] = useState(existingEntry?.color ?? '#3b82f6');
-  const [hexInput, setHexInput] = useState(existingEntry?.color ?? '#3b82f6');
+
+  // Parse existing color into hex + opacity
+  const parsed = parseColor(existingEntry?.color ?? '#38bdf8');
+  const [hexColor, setHexColor] = useState(parsed.hex);
+  const [opacity, setOpacity] = useState(parsed.opacity);
+  const [hexInput, setHexInput] = useState(parsed.hex);
+
+  // Compute the final color string
+  const color = buildColorString(hexColor, opacity);
   const [dStart, setDStart] = useState(existingEntry?.day_start ?? dayStart);
   const [dEnd, setDEnd] = useState(existingEntry?.day_end ?? dayEnd);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -70,8 +134,10 @@ export default function EntryEditor({
   }, [onClose]);
 
   function selectColor(c: string) {
-    setColor(c);
-    setHexInput(c);
+    const { hex, opacity: op } = parseColor(c);
+    setHexColor(hex);
+    setOpacity(op);
+    setHexInput(hex);
   }
 
   function handleHexChange(value: string) {
@@ -79,8 +145,12 @@ export default function EntryEditor({
     // Accept 3 or 6 digit hex (with or without #)
     const cleaned = value.startsWith('#') ? value : `#${value}`;
     if (/^#([0-9a-fA-F]{3}){1,2}$/.test(cleaned)) {
-      setColor(cleaned);
+      setHexColor(cleaned);
     }
+  }
+
+  function handleOpacityChange(value: number) {
+    setOpacity(Math.max(0.1, Math.min(1, value)));
   }
 
   function handleSave() {
@@ -208,7 +278,7 @@ export default function EntryEditor({
               {PRESET_COLORS.map((c) => (
                 <button
                   key={c}
-                  className={`${styles.colorSwatch} ${c === color ? styles.selected : ''}`}
+                  className={`${styles.colorSwatch} ${c === hexColor ? styles.selected : ''}`}
                   style={{ backgroundColor: c }}
                   onClick={() => selectColor(c)}
                 />
@@ -217,7 +287,7 @@ export default function EntryEditor({
             <div className={styles.customColorRow}>
               <input
                 type="color"
-                value={color}
+                value={hexColor}
                 onChange={(e) => selectColor(e.target.value)}
                 className={styles.nativePicker}
                 title="Pick custom color"
@@ -232,11 +302,24 @@ export default function EntryEditor({
                   value={hexInput}
                   onChange={(e) => handleHexChange(e.target.value)}
                   className={styles.hexInput}
-                  placeholder="#3b82f6"
+                  placeholder="#38bdf8"
                   spellCheck={false}
                 />
               </div>
             </div>
+          </div>
+          <div className={styles.opacityRow}>
+            <span className={styles.opacityLabel}>Opacity</span>
+            <input
+              type="range"
+              min="0.1"
+              max="1"
+              step="0.05"
+              value={opacity}
+              onChange={(e) => handleOpacityChange(parseFloat(e.target.value))}
+              className={styles.opacitySlider}
+            />
+            <span className={styles.opacityValue}>{Math.round(opacity * 100)}%</span>
           </div>
         </div>
 
