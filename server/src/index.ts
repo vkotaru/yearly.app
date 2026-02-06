@@ -13,7 +13,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// CORS: allow localhost for dev, and production URL from env
+// CORS: allow localhost for dev, Railway URL in production
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
@@ -22,8 +22,13 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, curl, etc)
-    if (!origin || allowedOrigins.includes(origin)) {
+    // Allow requests with no origin (same-origin, mobile apps, curl)
+    if (!origin) {
+      callback(null, true);
+    } else if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else if (process.env.NODE_ENV === 'production' && origin.includes('.railway.app')) {
+      // Allow Railway domains in production
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
