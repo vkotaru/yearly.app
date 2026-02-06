@@ -1,3 +1,13 @@
+// ── User (for Google OAuth) ──
+export interface User {
+  id: number;
+  google_id: string;
+  email: string;
+  name: string;
+  picture: string;
+  created_at: string;
+}
+
 export interface Entry {
   id: number;
   year: number;
@@ -10,6 +20,8 @@ export interface Entry {
   url: string;
   color: string;       // hex color
   category: string;
+  user_id?: number;    // owner (null for legacy entries)
+  is_private: boolean; // false = shared, true = only creator sees it
   created_at: string;
   updated_at: string;
 }
@@ -19,6 +31,7 @@ export interface Comment {
   entry_id: number;
   text: string;
   author: string;
+  user_id?: number;
   created_at: string;
 }
 
@@ -33,6 +46,7 @@ export interface CreateEntryDto {
   url?: string;
   color?: string;
   category?: string;
+  is_private?: boolean;
 }
 
 export interface UpdateEntryDto {
@@ -44,10 +58,20 @@ export interface UpdateEntryDto {
   url?: string;
   color?: string;
   category?: string;
+  is_private?: boolean;
 }
 
 export interface CreateCommentDto {
   entry_id: number;
   text: string;
   author?: string;
+}
+
+// ── Auth DTOs ──
+export interface GoogleAuthDto {
+  credential: string;
+}
+
+export interface AuthResponse {
+  user: User;
 }

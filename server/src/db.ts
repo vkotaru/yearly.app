@@ -55,4 +55,35 @@ db.exec(`
   )
 `);
 
+// ── Users table (for Google OAuth) ──
+db.exec(`
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    google_id TEXT NOT NULL UNIQUE,
+    email TEXT NOT NULL,
+    name TEXT NOT NULL,
+    picture TEXT DEFAULT '',
+    created_at TEXT DEFAULT (datetime('now'))
+  )
+`);
+
+// ── Migrate entries: add user_id and is_private ──
+const entryCols = db.prepare("PRAGMA table_info(entries)").all() as { name: string }[];
+const entryColNames = entryCols.map((c) => c.name);
+
+if (!entryColNames.includes('user_id')) {
+  try { db.exec(`ALTER TABLE entries ADD COLUMN user_id INTEGER REFERENCES users(id)`); } catch { /* exists */ }
+}
+if (!entryColNames.includes('is_private')) {
+  try { db.exec(`ALTER TABLE entries ADD COLUMN is_private INTEGER DEFAULT 0`); } catch { /* exists */ }
+}
+
+// ── Migrate comments: add user_id ──
+const commentCols = db.prepare("PRAGMA table_info(comments)").all() as { name: string }[];
+const commentColNames = commentCols.map((c) => c.name);
+
+if (!commentColNames.includes('user_id')) {
+  try { db.exec(`ALTER TABLE comments ADD COLUMN user_id INTEGER REFERENCES users(id)`); } catch { /* exists */ }
+}
+
 export default db;

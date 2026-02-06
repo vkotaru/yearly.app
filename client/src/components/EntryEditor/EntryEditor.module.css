@@ -281,6 +281,33 @@
   background: #fef2f2 !important;
 }
 
+/* ── Privacy toggle ── */
+.privacySection {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.privacyToggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.privacyToggle input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #3b82f6;
+}
+
+.privacyToggle span {
+  font-size: 14px;
+  color: #475569;
+}
+
 /* ── Comments section ── */
 .commentsSection {
   margin-top: 14px;

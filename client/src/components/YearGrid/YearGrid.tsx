@@ -14,6 +14,13 @@ export interface ResizeState {
   currentDayEnd: number;
 }
 
+export interface MoveState {
+  entry: Entry;
+  grabOffset: number;
+  currentDayStart: number;
+  span: number;
+}
+
 interface EditorState {
   month: number;
   dayStart: number;
@@ -36,8 +43,11 @@ export default function YearGrid({ year }: Props) {
   const [highlightedCol, setHighlightedCol] = useState<number | null>(null);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [resize, setResize] = useState<ResizeState | null>(null);
+  const [move, setMove] = useState<MoveState | null>(null);
   const isDragging = useRef(false);
   const isResizing = useRef(false);
+  const isMoving = useRef(false);
+  const moveIntent = useRef<{ entry: Entry; startX: number } | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
 
   const loadEntries = useCallback(async () => {
@@ -49,9 +59,37 @@ export default function YearGrid({ year }: Props) {
     loadEntries();
   }, [loadEntries]);
 
-  // Global mouseup to finish drag or resize
+  // Global mouseup to finish drag, resize, or move
   useEffect(() => {
     function handleMouseUp() {
+      // Finish entry move
+      if (isMoving.current && move) {
+        isMoving.current = false;
+        moveIntent.current = null;
+        if (move.currentDayStart !== move.entry.day_start) {
+          const newDayEnd = move.currentDayStart + move.span;
+          updateEntry(move.entry.id, {
+            day_start: move.currentDayStart,
+            day_end: newDayEnd,
+          }).then(() => loadEntries());
+        }
+        setMove(null);
+        return;
+      }
+      // Entry click (mousedown on entry without enough movement to start move)
+      if (moveIntent.current) {
+        const entry = moveIntent.current.entry;
+        moveIntent.current = null;
+        setEditor({
+          month: entry.month,
+          dayStart: entry.day_start,
+          dayEnd: entry.day_end,
+          rowIndex: entry.row_index,
+          entry,
+        });
+        return;
+      }
+      // Finish resize
       if (isResizing.current && resize) {
         isResizing.current = false;
         if (resize.currentDayEnd !== resize.originalDayEnd) {
@@ -61,6 +99,7 @@ export default function YearGrid({ year }: Props) {
         setResize(null);
         return;
       }
+      // Finish drag-to-create
       if (isDragging.current && drag) {
         isDragging.current = false;
         const lo = Math.min(drag.dayStart, drag.dayEnd);
@@ -76,7 +115,7 @@ export default function YearGrid({ year }: Props) {
     }
     window.addEventListener('mouseup', handleMouseUp);
     return () => window.removeEventListener('mouseup', handleMouseUp);
-  }, [drag, resize, loadEntries]);
+  }, [drag, resize, move, loadEntries]);
 
   // Global mousemove during resize — compute day from pixel position
   useEffect(() => {
@@ -95,6 +134,47 @@ export default function YearGrid({ year }: Props) {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, [resize, year]);
 
+  // Detect move threshold (mousedown on entry → moved > 5px)
+  useEffect(() => {
+    function handleMouseMove(e: MouseEvent) {
+      if (!moveIntent.current || isMoving.current || isResizing.current || !gridRef.current) return;
+      const dx = Math.abs(e.clientX - moveIntent.current.startX);
+      if (dx > 5) {
+        isMoving.current = true;
+        const entry = moveIntent.current.entry;
+        const gridRect = gridRef.current.getBoundingClientRect();
+        const xInGrid = moveIntent.current.startX - gridRect.left - 72;
+        const grabDay = Math.max(1, Math.floor(xInGrid / 40) + 1);
+        const grabOffset = grabDay - entry.day_start;
+        const span = entry.day_end - entry.day_start;
+        setMove({ entry, grabOffset, currentDayStart: entry.day_start, span });
+      }
+    }
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, [year]);
+
+  // Global mousemove during move — compute new day_start from pixel position
+  useEffect(() => {
+    if (!move) return;
+    function handleMouseMove(e: MouseEvent) {
+      if (!isMoving.current || !move || !gridRef.current) return;
+      const gridRect = gridRef.current.getBoundingClientRect();
+      const xInGrid = e.clientX - gridRect.left - 72;
+      const dayAtMouse = Math.floor(xInGrid / 40) + 1;
+      const newDayStart = dayAtMouse - move.grabOffset;
+      const maxDay = getDaysInMonth(year, move.entry.month);
+      const clampedStart = Math.max(1, Math.min(newDayStart, maxDay - move.span));
+      setMove(prev => prev ? { ...prev, currentDayStart: clampedStart } : null);
+    }
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, [move, year]);
+
+  function handleEntryMouseDown(entry: Entry, clientX: number) {
+    moveIntent.current = { entry, startX: clientX };
+  }
+
   function handleCellMouseDown(month: number, day: number, rowIndex: number) {
     isDragging.current = true;
     setDrag({ month, rowIndex, dayStart: day, dayEnd: day });
@@ -105,17 +185,6 @@ export default function YearGrid({ year }: Props) {
     // Only extend within same month + row
     if (month !== drag.month || rowIndex !== drag.rowIndex) return;
     setDrag((prev) => prev ? { ...prev, dayEnd: day } : null);
-  }
-
-  function handleEntryClick(entry: Entry) {
-    if (isResizing.current) return;
-    setEditor({
-      month: entry.month,
-      dayStart: entry.day_start,
-      dayEnd: entry.day_end,
-      rowIndex: entry.row_index,
-      entry,
-    });
   }
 
   function handleResizeStart(entry: Entry) {
@@ -200,9 +269,10 @@ export default function YearGrid({ year }: Props) {
               highlightedCol={highlightedCol}
               filteredEntryIds={filteredEntryIds}
               resize={resize}
+              move={move}
               onCellMouseDown={handleCellMouseDown}
               onCellMouseEnter={handleCellMouseEnter}
-              onEntryClick={handleEntryClick}
+              onEntryMouseDown={handleEntryMouseDown}
               onAddRow={handleAddRow}
               onResizeStart={handleResizeStart}
             />

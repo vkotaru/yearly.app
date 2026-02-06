@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { Entry } from '../../../../shared/types';
-import type { ResizeState } from '../YearGrid/YearGrid';
+import type { ResizeState, MoveState } from '../YearGrid/YearGrid';
 import { getDaysInMonth, isWeekend, getMonthName } from '../../utils/calendar';
 import { computeRowSlots } from '../../utils/entryLayout';
 import styles from './MonthRow.module.css';
@@ -21,29 +21,40 @@ interface Props {
   highlightedCol: number | null;
   filteredEntryIds: Set<number> | null;
   resize: ResizeState | null;
+  move: MoveState | null;
   onCellMouseDown: (month: number, day: number, rowIndex: number) => void;
   onCellMouseEnter: (month: number, day: number, rowIndex: number) => void;
-  onEntryClick: (entry: Entry) => void;
+  onEntryMouseDown: (entry: Entry, clientX: number) => void;
   onAddRow: (month: number) => void;
   onResizeStart: (entry: Entry) => void;
 }
 
 export default function MonthRow({
   year, month, entries, minRows, drag, highlightedCol,
-  filteredEntryIds, resize,
-  onCellMouseDown, onCellMouseEnter, onEntryClick, onAddRow, onResizeStart,
+  filteredEntryIds, resize, move,
+  onCellMouseDown, onCellMouseEnter, onEntryMouseDown, onAddRow, onResizeStart,
 }: Props) {
   const daysInMonth = getDaysInMonth(year, month);
 
-  // Adjust entries if one is being resized in this month
+  // Adjust entries if one is being resized or moved in this month
   const adjustedEntries = useMemo(() => {
-    if (!resize || resize.entry.month !== month) return entries;
-    return entries.map(e =>
-      e.id === resize.entry.id
-        ? { ...e, day_end: resize.currentDayEnd }
-        : e
-    );
-  }, [entries, resize, month]);
+    let result = entries;
+    if (resize && resize.entry.month === month) {
+      result = result.map(e =>
+        e.id === resize.entry.id
+          ? { ...e, day_end: resize.currentDayEnd }
+          : e
+      );
+    }
+    if (move && move.entry.month === month) {
+      result = result.map(e =>
+        e.id === move.entry.id
+          ? { ...e, day_start: move.currentDayStart, day_end: move.currentDayStart + move.span }
+          : e
+      );
+    }
+    return result;
+  }, [entries, resize, move, month]);
 
   const rows = useMemo(
     () => computeRowSlots(adjustedEntries, daysInMonth, minRows),
@@ -128,7 +139,10 @@ export default function MonthRow({
                       color: textColor(entry.color),
                       opacity: isDimmed ? 0.2 : 1,
                     }}
-                    onClick={() => onEntryClick(entry)}
+                    onMouseDown={(e) => {
+                      if (e.button !== 0) return;
+                      onEntryMouseDown(entry, e.clientX);
+                    }}
                     title={tooltip}
                   >
                     <span className={styles.entryText}>{entry.title}</span>

@@ -36,6 +36,7 @@ export default function EntryEditor({
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [loadingComments, setLoadingComments] = useState(false);
+  const [isPrivate, setIsPrivate] = useState(existingEntry?.is_private ?? false);
   const dialogRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -95,6 +96,7 @@ export default function EntryEditor({
         color,
         day_start: start,
         day_end: end,
+        is_private: isPrivate,
       });
     } else {
       onSave({
@@ -108,6 +110,7 @@ export default function EntryEditor({
         url,
         category,
         color,
+        is_private: isPrivate,
       });
     }
   }
@@ -235,6 +238,17 @@ export default function EntryEditor({
               </div>
             </div>
           </div>
+        </div>
+
+        <div className={styles.privacySection}>
+          <label className={styles.privacyToggle}>
+            <input
+              type="checkbox"
+              checked={isPrivate}
+              onChange={(e) => setIsPrivate(e.target.checked)}
+            />
+            <span>Private (only visible to you)</span>
+          </label>
         </div>
 
         {existingEntry && (

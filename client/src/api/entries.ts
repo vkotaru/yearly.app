@@ -3,7 +3,9 @@ import type { Entry, Comment, CreateEntryDto, UpdateEntryDto } from '../../../sh
 const BASE = '/api/entries';
 
 export async function fetchEntries(year: number): Promise<Entry[]> {
-  const res = await fetch(`${BASE}/${year}`);
+  const res = await fetch(`${BASE}/${year}`, {
+    credentials: 'include',
+  });
   if (!res.ok) throw new Error('Failed to fetch entries');
   return res.json();
 }
@@ -13,6 +15,7 @@ export async function createEntry(dto: CreateEntryDto): Promise<Entry> {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(dto),
+    credentials: 'include',
   });
   if (!res.ok) throw new Error('Failed to create entry');
   return res.json();
@@ -23,20 +26,26 @@ export async function updateEntry(id: number, dto: UpdateEntryDto): Promise<Entr
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(dto),
+    credentials: 'include',
   });
   if (!res.ok) throw new Error('Failed to update entry');
   return res.json();
 }
 
 export async function deleteEntry(id: number): Promise<void> {
-  const res = await fetch(`${BASE}/${id}`, { method: 'DELETE' });
+  const res = await fetch(`${BASE}/${id}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  });
   if (!res.ok) throw new Error('Failed to delete entry');
 }
 
 // ── Comments ──
 
 export async function fetchComments(entryId: number): Promise<Comment[]> {
-  const res = await fetch(`${BASE}/${entryId}/comments`);
+  const res = await fetch(`${BASE}/${entryId}/comments`, {
+    credentials: 'include',
+  });
   if (!res.ok) throw new Error('Failed to fetch comments');
   return res.json();
 }
@@ -46,12 +55,16 @@ export async function createComment(entryId: number, text: string, author?: stri
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text, author }),
+    credentials: 'include',
   });
   if (!res.ok) throw new Error('Failed to create comment');
   return res.json();
 }
 
 export async function deleteComment(commentId: number): Promise<void> {
-  const res = await fetch(`${BASE}/comments/${commentId}`, { method: 'DELETE' });
+  const res = await fetch(`${BASE}/comments/${commentId}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  });
   if (!res.ok) throw new Error('Failed to delete comment');
 }
