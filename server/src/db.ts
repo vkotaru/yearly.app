@@ -86,6 +86,15 @@ if (!entryColNames.includes('user_id')) {
 if (!entryColNames.includes('is_private')) {
   try { db.exec(`ALTER TABLE entries ADD COLUMN is_private INTEGER DEFAULT 0`); } catch { /* exists */ }
 }
+if (!entryColNames.includes('emoji')) {
+  try { db.exec(`ALTER TABLE entries ADD COLUMN emoji TEXT DEFAULT ''`); } catch { /* exists */ }
+}
+if (!entryColNames.includes('departure_time')) {
+  try { db.exec(`ALTER TABLE entries ADD COLUMN departure_time TEXT DEFAULT ''`); } catch { /* exists */ }
+}
+if (!entryColNames.includes('arrival_time')) {
+  try { db.exec(`ALTER TABLE entries ADD COLUMN arrival_time TEXT DEFAULT ''`); } catch { /* exists */ }
+}
 
 // ── Migrate comments: add user_id ──
 const commentCols = db.prepare("PRAGMA table_info(comments)").all() as { name: string }[];

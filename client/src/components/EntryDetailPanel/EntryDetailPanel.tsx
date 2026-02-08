@@ -56,7 +56,10 @@ export default function EntryDetailPanel({ entry, onClose, onEdit }: Props) {
           style={{ backgroundColor: entry.color }}
         />
         <div className={styles.titleSection}>
-          <h3 className={styles.title}>{entry.title || 'Untitled'}</h3>
+          <h3 className={styles.title}>
+            {entry.emoji && <span className={styles.emoji}>{entry.emoji}</span>}
+            {entry.title || 'Untitled'}
+          </h3>
           <span className={styles.date}>{dateLabel}</span>
         </div>
         <button className={styles.editBtn} onClick={onEdit}>
@@ -70,6 +73,23 @@ export default function EntryDetailPanel({ entry, onClose, onEdit }: Props) {
 
       {entry.category && (
         <div className={styles.category}>{entry.category}</div>
+      )}
+
+      {(entry.departure_time || entry.arrival_time) && (
+        <div className={styles.travelSection}>
+          {entry.departure_time && (
+            <div className={styles.travelItem}>
+              <span className={styles.travelIcon}>🛫</span>
+              <span>{entry.departure_time}</span>
+            </div>
+          )}
+          {entry.arrival_time && (
+            <div className={styles.travelItem}>
+              <span className={styles.travelIcon}>🛬</span>
+              <span>{entry.arrival_time}</span>
+            </div>
+          )}
+        </div>
       )}
 
       <div className={styles.todosSection}>

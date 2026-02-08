@@ -31,7 +31,7 @@ router.get('/:year', (req, res) => {
 // POST /api/entries — auto-set user_id
 router.post('/', (req, res) => {
   const body: CreateEntryDto = req.body;
-  const { year, month, day_start, day_end, row_index, title, description, url, color, category, is_private } = body;
+  const { year, month, day_start, day_end, row_index, title, description, url, color, category, emoji, departure_time, arrival_time, is_private } = body;
 
   if (!year || !month || !day_start || !day_end || row_index == null) {
     res.status(400).json({ error: 'Missing required fields: year, month, day_start, day_end, row_index' });
@@ -47,11 +47,12 @@ router.post('/', (req, res) => {
   const isPrivate = is_private ? 1 : 0;
 
   const result = db.prepare(`
-    INSERT INTO entries (year, month, day_start, day_end, row_index, title, description, url, color, category, user_id, is_private)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO entries (year, month, day_start, day_end, row_index, title, description, url, color, category, emoji, departure_time, arrival_time, user_id, is_private)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     year, month, day_start, day_end, row_index,
     title ?? '', description ?? '', url ?? '', color ?? '#3b82f6', category ?? '',
+    emoji ?? '', departure_time ?? '', arrival_time ?? '',
     userId, isPrivate
   );
 
@@ -91,6 +92,9 @@ router.put('/:id', (req, res) => {
   if (body.url != null) { updates.push('url = ?'); values.push(body.url); }
   if (body.color != null) { updates.push('color = ?'); values.push(body.color); }
   if (body.category != null) { updates.push('category = ?'); values.push(body.category); }
+  if (body.emoji != null) { updates.push('emoji = ?'); values.push(body.emoji); }
+  if (body.departure_time != null) { updates.push('departure_time = ?'); values.push(body.departure_time); }
+  if (body.arrival_time != null) { updates.push('arrival_time = ?'); values.push(body.arrival_time); }
   if (body.is_private != null) { updates.push('is_private = ?'); values.push(body.is_private ? 1 : 0); }
 
   if (updates.length === 0) {

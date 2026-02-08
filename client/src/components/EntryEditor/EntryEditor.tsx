@@ -18,6 +18,12 @@ const PRESET_COLORS = [
   '#a3a3a3', // neutral
 ];
 
+// Common emojis for quick selection
+const QUICK_EMOJIS = [
+  '✈️', '🚗', '🏖️', '🏔️', '🎉', '💼', '🏠', '❤️', '🎂', '🎄',
+  '🌴', '🗓️', '📍', '🎯', '⭐', '🔥', '✅', '🎵', '🍽️', '💪',
+];
+
 // Convert hex to RGB object
 function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -86,6 +92,9 @@ export default function EntryEditor({
   const [description, setDescription] = useState(existingEntry?.description ?? '');
   const [url, setUrl] = useState(existingEntry?.url ?? '');
   const [category, setCategory] = useState(existingEntry?.category ?? '');
+  const [emoji, setEmoji] = useState(existingEntry?.emoji ?? '');
+  const [departureTime, setDepartureTime] = useState(existingEntry?.departure_time ?? '');
+  const [arrivalTime, setArrivalTime] = useState(existingEntry?.arrival_time ?? '');
 
   // Parse existing color into hex + opacity
   const parsed = parseColor(existingEntry?.color ?? '#38bdf8');
@@ -172,6 +181,9 @@ export default function EntryEditor({
         description,
         url,
         category,
+        emoji,
+        departure_time: departureTime,
+        arrival_time: arrivalTime,
         color,
         day_start: start,
         day_end: end,
@@ -188,6 +200,9 @@ export default function EntryEditor({
         description,
         url,
         category,
+        emoji,
+        departure_time: departureTime,
+        arrival_time: arrivalTime,
         color,
         is_private: isPrivate,
       });
@@ -275,6 +290,52 @@ export default function EntryEditor({
             onChange={(e) => setCategory(e.target.value)}
             placeholder="Category (optional)..."
           />
+        </div>
+
+        <div className={styles.emojiSection}>
+          <span className={styles.emojiLabel}>Emoji</span>
+          <div className={styles.emojiRow}>
+            <input
+              type="text"
+              className={styles.emojiInput}
+              value={emoji}
+              onChange={(e) => setEmoji(e.target.value)}
+              placeholder="🎯"
+              maxLength={4}
+            />
+            <div className={styles.quickEmojis}>
+              {QUICK_EMOJIS.map((e) => (
+                <button
+                  key={e}
+                  type="button"
+                  className={`${styles.emojiBtn} ${emoji === e ? styles.selected : ''}`}
+                  onClick={() => setEmoji(e)}
+                >
+                  {e}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className={styles.travelSection}>
+          <span className={styles.travelLabel}>Travel Times</span>
+          <div className={styles.travelRow}>
+            <input
+              type="text"
+              className={styles.textInput}
+              value={departureTime}
+              onChange={(e) => setDepartureTime(e.target.value)}
+              placeholder="Departure (e.g. 8:00 AM SFO)"
+            />
+            <input
+              type="text"
+              className={styles.textInput}
+              value={arrivalTime}
+              onChange={(e) => setArrivalTime(e.target.value)}
+              placeholder="Arrival (e.g. 4:00 PM JFK)"
+            />
+          </div>
         </div>
 
         <div className={styles.rangeRow}>

@@ -167,6 +167,7 @@ export default function MonthRow({
                     }}
                     title={tooltip}
                   >
+                    {entry.emoji && <span className={styles.entryEmoji}>{entry.emoji}</span>}
                     <span className={styles.entryText}>{entry.title}</span>
                     {entry.incomplete_todos != null && entry.incomplete_todos > 0 && (
                       <span className={styles.todoBadge} title={`${entry.incomplete_todos} item${entry.incomplete_todos > 1 ? 's' : ''} left`}>

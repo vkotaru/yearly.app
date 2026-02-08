@@ -626,3 +626,96 @@
   padding: 8px 0;
   text-align: center;
 }
+
+/* ── Emoji section ── */
+.emojiSection {
+  margin-top: 12px;
+}
+
+.emojiLabel {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.emojiRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.emojiInput {
+  width: 50px;
+  height: 36px;
+  text-align: center;
+  font-size: 20px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+}
+
+.emojiInput:focus {
+  outline: none;
+  border-color: var(--accent-500);
+  box-shadow: 0 0 0 3px var(--accent-100);
+}
+
+.quickEmojis {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  flex: 1;
+}
+
+.emojiBtn {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-fast);
+}
+
+.emojiBtn:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent-300);
+}
+
+.emojiBtn.selected {
+  background: var(--accent-100);
+  border-color: var(--accent-500);
+}
+
+/* ── Travel section ── */
+.travelSection {
+  margin-top: 12px;
+}
+
+.travelLabel {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.travelRow {
+  display: flex;
+  gap: 10px;
+}
+
+.travelRow .textInput {
+  flex: 1;
+  margin-bottom: 0;
+}

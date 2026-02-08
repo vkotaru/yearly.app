@@ -20,6 +20,9 @@ export interface Entry {
   url: string;
   color: string;       // hex color
   category: string;
+  emoji: string;       // emoji displayed before title
+  departure_time: string; // travel departure info
+  arrival_time: string;   // travel arrival info
   user_id?: number;    // owner (null for legacy entries)
   is_private: boolean; // false = shared, true = only creator sees it
   created_at: string;
@@ -48,6 +51,9 @@ export interface CreateEntryDto {
   url?: string;
   color?: string;
   category?: string;
+  emoji?: string;
+  departure_time?: string;
+  arrival_time?: string;
   is_private?: boolean;
 }
 
@@ -60,6 +66,9 @@ export interface UpdateEntryDto {
   url?: string;
   color?: string;
   category?: string;
+  emoji?: string;
+  departure_time?: string;
+  arrival_time?: string;
   is_private?: boolean;
 }
 

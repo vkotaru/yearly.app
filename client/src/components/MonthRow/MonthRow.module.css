@@ -133,6 +133,12 @@
   transform: translateY(0);
 }
 
+.entryEmoji {
+  flex-shrink: 0;
+  font-size: 12px;
+  margin-right: 4px;
+}
+
 .entryText {
   font-size: calc(var(--font-size, 13px) - 2px);
   font-weight: 500;
