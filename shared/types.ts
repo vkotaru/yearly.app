@@ -67,6 +67,27 @@ export interface CreateCommentDto {
   author?: string;
 }
 
+// ── Todo (checklist items for entries) ──
+export interface Todo {
+  id: number;
+  entry_id: number;
+  text: string;
+  completed: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateTodoDto {
+  text: string;
+}
+
+export interface UpdateTodoDto {
+  text?: string;
+  completed?: boolean;
+  sort_order?: number;
+}
+
 // ── Auth DTOs ──
 export interface GoogleAuthDto {
   credential: string;

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import db from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
-import type { CreateEntryDto, UpdateEntryDto, CreateCommentDto } from '../../../shared/types.js';
+import type { CreateEntryDto, UpdateEntryDto, CreateCommentDto, CreateTodoDto, UpdateTodoDto } from '../../../shared/types.js';
 
 const router = Router();
 
@@ -212,6 +212,137 @@ router.delete('/comments/:commentId', (req, res) => {
   }
 
   db.prepare('DELETE FROM comments WHERE id = ?').run(commentId);
+  res.status(204).send();
+});
+
+// ── Todos ──
+
+// GET /api/entries/:id/todos — get all todos for an entry
+router.get('/:id/todos', (req, res) => {
+  const entryId = parseInt(req.params.id, 10);
+  if (isNaN(entryId)) {
+    res.status(400).json({ error: 'Invalid entry id' });
+    return;
+  }
+
+  const entry = db.prepare('SELECT * FROM entries WHERE id = ?').get(entryId) as any;
+  if (!entry) {
+    res.status(404).json({ error: 'Entry not found' });
+    return;
+  }
+
+  // Access check for private entries
+  if (entry.is_private && entry.user_id !== req.user!.id) {
+    res.status(403).json({ error: 'Forbidden - cannot access private entry' });
+    return;
+  }
+
+  const todos = db.prepare('SELECT * FROM todos WHERE entry_id = ? ORDER BY sort_order ASC, id ASC').all(entryId);
+  res.json(todos);
+});
+
+// POST /api/entries/:id/todos — create a new todo
+router.post('/:id/todos', (req, res) => {
+  const entryId = parseInt(req.params.id, 10);
+  if (isNaN(entryId)) {
+    res.status(400).json({ error: 'Invalid entry id' });
+    return;
+  }
+
+  const entry = db.prepare('SELECT * FROM entries WHERE id = ?').get(entryId) as any;
+  if (!entry) {
+    res.status(404).json({ error: 'Entry not found' });
+    return;
+  }
+
+  // Access check for private entries
+  if (entry.is_private && entry.user_id !== req.user!.id) {
+    res.status(403).json({ error: 'Forbidden - cannot add todo to private entry' });
+    return;
+  }
+
+  const body: CreateTodoDto = req.body;
+  if (!body.text?.trim()) {
+    res.status(400).json({ error: 'Todo text is required' });
+    return;
+  }
+
+  // Get max sort_order for this entry
+  const maxOrder = db.prepare('SELECT MAX(sort_order) as max FROM todos WHERE entry_id = ?').get(entryId) as any;
+  const sortOrder = (maxOrder?.max ?? -1) + 1;
+
+  const result = db.prepare(
+    'INSERT INTO todos (entry_id, text, sort_order) VALUES (?, ?, ?)'
+  ).run(entryId, body.text.trim(), sortOrder);
+
+  const todo = db.prepare('SELECT * FROM todos WHERE id = ?').get(result.lastInsertRowid);
+  res.status(201).json(todo);
+});
+
+// PUT /api/entries/todos/:todoId — update a todo
+router.put('/todos/:todoId', (req, res) => {
+  const todoId = parseInt(req.params.todoId, 10);
+  if (isNaN(todoId)) {
+    res.status(400).json({ error: 'Invalid todo id' });
+    return;
+  }
+
+  const todo = db.prepare('SELECT * FROM todos WHERE id = ?').get(todoId) as any;
+  if (!todo) {
+    res.status(404).json({ error: 'Todo not found' });
+    return;
+  }
+
+  // Check entry access
+  const entry = db.prepare('SELECT * FROM entries WHERE id = ?').get(todo.entry_id) as any;
+  if (entry.is_private && entry.user_id !== req.user!.id) {
+    res.status(403).json({ error: 'Forbidden - cannot modify todo on private entry' });
+    return;
+  }
+
+  const body: UpdateTodoDto = req.body;
+  const updates: string[] = [];
+  const values: unknown[] = [];
+
+  if (body.text != null) { updates.push('text = ?'); values.push(body.text); }
+  if (body.completed != null) { updates.push('completed = ?'); values.push(body.completed ? 1 : 0); }
+  if (body.sort_order != null) { updates.push('sort_order = ?'); values.push(body.sort_order); }
+
+  if (updates.length === 0) {
+    res.status(400).json({ error: 'No fields to update' });
+    return;
+  }
+
+  updates.push("updated_at = datetime('now')");
+  values.push(todoId);
+
+  db.prepare(`UPDATE todos SET ${updates.join(', ')} WHERE id = ?`).run(...values);
+  const updatedTodo = db.prepare('SELECT * FROM todos WHERE id = ?').get(todoId);
+  res.json(updatedTodo);
+});
+
+// DELETE /api/entries/todos/:todoId — delete a todo
+router.delete('/todos/:todoId', (req, res) => {
+  const todoId = parseInt(req.params.todoId, 10);
+  if (isNaN(todoId)) {
+    res.status(400).json({ error: 'Invalid todo id' });
+    return;
+  }
+
+  const todo = db.prepare('SELECT * FROM todos WHERE id = ?').get(todoId) as any;
+  if (!todo) {
+    res.status(404).json({ error: 'Todo not found' });
+    return;
+  }
+
+  // Check entry access
+  const entry = db.prepare('SELECT * FROM entries WHERE id = ?').get(todo.entry_id) as any;
+  if (entry.is_private && entry.user_id !== req.user!.id) {
+    res.status(403).json({ error: 'Forbidden - cannot delete todo on private entry' });
+    return;
+  }
+
+  db.prepare('DELETE FROM todos WHERE id = ?').run(todoId);
   res.status(204).send();
 });
 

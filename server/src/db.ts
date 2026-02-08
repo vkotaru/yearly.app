@@ -95,4 +95,18 @@ if (!commentColNames.includes('user_id')) {
   try { db.exec(`ALTER TABLE comments ADD COLUMN user_id INTEGER REFERENCES users(id)`); } catch { /* exists */ }
 }
 
+// ── Todos table (for entry checklists) ──
+db.exec(`
+  CREATE TABLE IF NOT EXISTS todos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    entry_id INTEGER NOT NULL,
+    text TEXT NOT NULL,
+    completed INTEGER DEFAULT 0,
+    sort_order INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (entry_id) REFERENCES entries(id) ON DELETE CASCADE
+  )
+`);
+
 export default db;

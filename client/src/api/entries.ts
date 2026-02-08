@@ -1,4 +1,4 @@
-import type { Entry, Comment, CreateEntryDto, UpdateEntryDto } from '../../../shared/types';
+import type { Entry, Comment, Todo, CreateEntryDto, UpdateEntryDto, CreateTodoDto, UpdateTodoDto } from '../../../shared/types';
 
 const BASE = '/api/entries';
 
@@ -67,4 +67,44 @@ export async function deleteComment(commentId: number): Promise<void> {
     credentials: 'include',
   });
   if (!res.ok) throw new Error('Failed to delete comment');
+}
+
+// ── Todos ──
+
+export async function fetchTodos(entryId: number): Promise<Todo[]> {
+  const res = await fetch(`${BASE}/${entryId}/todos`, {
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error('Failed to fetch todos');
+  return res.json();
+}
+
+export async function createTodo(entryId: number, text: string): Promise<Todo> {
+  const res = await fetch(`${BASE}/${entryId}/todos`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text }),
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error('Failed to create todo');
+  return res.json();
+}
+
+export async function updateTodo(todoId: number, updates: UpdateTodoDto): Promise<Todo> {
+  const res = await fetch(`${BASE}/todos/${todoId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates),
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error('Failed to update todo');
+  return res.json();
+}
+
+export async function deleteTodo(todoId: number): Promise<void> {
+  const res = await fetch(`${BASE}/todos/${todoId}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error('Failed to delete todo');
 }

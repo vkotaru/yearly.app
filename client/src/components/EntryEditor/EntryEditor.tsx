@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import type { Entry, Comment, CreateEntryDto, UpdateEntryDto } from '../../../../shared/types';
-import { fetchComments, createComment, deleteComment } from '../../api/entries';
+import type { Entry, Comment, Todo, CreateEntryDto, UpdateEntryDto } from '../../../../shared/types';
+import { fetchComments, createComment, deleteComment, fetchTodos, createTodo, updateTodo, deleteTodo } from '../../api/entries';
 import { getDaysInMonth, getMonthName } from '../../utils/calendar';
 import styles from './EntryEditor.module.css';
 
@@ -101,6 +101,9 @@ export default function EntryEditor({
   const [newComment, setNewComment] = useState('');
   const [loadingComments, setLoadingComments] = useState(false);
   const [isPrivate, setIsPrivate] = useState(existingEntry?.is_private ?? false);
+  const [todos, setTodos] = useState<Todo[]>([]);
+  const [newTodo, setNewTodo] = useState('');
+  const [loadingTodos, setLoadingTodos] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -115,6 +118,12 @@ export default function EntryEditor({
         .then(setComments)
         .catch(console.error)
         .finally(() => setLoadingComments(false));
+
+      setLoadingTodos(true);
+      fetchTodos(existingEntry.id)
+        .then(setTodos)
+        .catch(console.error)
+        .finally(() => setLoadingTodos(false));
     }
   }, [existingEntry]);
 
@@ -196,6 +205,26 @@ export default function EntryEditor({
     await deleteComment(commentId);
     setComments(prev => prev.filter(c => c.id !== commentId));
   }
+
+  async function handleAddTodo() {
+    if (!newTodo.trim() || !existingEntry) return;
+    const todo = await createTodo(existingEntry.id, newTodo.trim());
+    setTodos(prev => [...prev, todo]);
+    setNewTodo('');
+  }
+
+  async function handleToggleTodo(todoId: number, completed: boolean) {
+    const updated = await updateTodo(todoId, { completed });
+    setTodos(prev => prev.map(t => t.id === todoId ? updated : t));
+  }
+
+  async function handleDeleteTodo(todoId: number) {
+    await deleteTodo(todoId);
+    setTodos(prev => prev.filter(t => t.id !== todoId));
+  }
+
+  const completedTodos = todos.filter(t => t.completed).length;
+  const totalTodos = todos.length;
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === 'Enter') handleSave();
@@ -333,6 +362,63 @@ export default function EntryEditor({
             <span>Private (only visible to you)</span>
           </label>
         </div>
+
+        {existingEntry && (
+          <div className={styles.todosSection}>
+            <div className={styles.todosHeader}>
+              <span className={styles.todosLabel}>Checklist</span>
+              {totalTodos > 0 && (
+                <span className={styles.todosProgress}>{completedTodos}/{totalTodos} done</span>
+              )}
+            </div>
+            {loadingTodos ? (
+              <div className={styles.todosLoading}>Loading...</div>
+            ) : (
+              <>
+                {todos.length > 0 ? (
+                  <div className={styles.todosList}>
+                    {todos.map(t => (
+                      <div key={t.id} className={styles.todoItem}>
+                        <input
+                          type="checkbox"
+                          className={styles.todoCheckbox}
+                          checked={t.completed}
+                          onChange={e => handleToggleTodo(t.id, e.target.checked)}
+                        />
+                        <span className={`${styles.todoText} ${t.completed ? styles.completed : ''}`}>
+                          {t.text}
+                        </span>
+                        <button
+                          className={styles.todoDeleteBtn}
+                          onClick={() => handleDeleteTodo(t.id)}
+                          title="Delete todo"
+                        >&times;</button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className={styles.emptyTodos}>No items yet</div>
+                )}
+                <div className={styles.todoInputRow}>
+                  <input
+                    type="text"
+                    className={styles.textInput}
+                    value={newTodo}
+                    onChange={e => setNewTodo(e.target.value)}
+                    placeholder="Add a checklist item..."
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.stopPropagation();
+                        handleAddTodo();
+                      }
+                    }}
+                  />
+                  <button className={styles.todoAddBtn} onClick={handleAddTodo}>Add</button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
 
         {existingEntry && (
           <div className={styles.commentsSection}>
