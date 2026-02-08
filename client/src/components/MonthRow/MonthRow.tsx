@@ -139,6 +139,7 @@ export default function MonthRow({
                 const entry = slot.entry;
                 const span = Math.min(entry.day_end, daysInMonth) - entry.day_start + 1;
                 const isDimmed = filteredEntryIds !== null && !filteredEntryIds.has(entry.id);
+                const isEntryPast = isPast(entry.day_end); // Gray out if the entry has ended
                 const tooltip = [
                   entry.title,
                   entry.description,
@@ -148,7 +149,12 @@ export default function MonthRow({
                 return (
                   <div
                     key={di}
-                    className={`${styles.cell} ${styles.entryCell} ${isLast ? styles.lastRow : ''}`}
+                    className={[
+                      styles.cell,
+                      styles.entryCell,
+                      isLast ? styles.lastRow : '',
+                      isEntryPast ? styles.pastEntry : '',
+                    ].filter(Boolean).join(' ')}
                     style={{
                       gridColumn: `span ${span}`,
                       backgroundColor: entry.color,
@@ -162,6 +168,11 @@ export default function MonthRow({
                     title={tooltip}
                   >
                     <span className={styles.entryText}>{entry.title}</span>
+                    {entry.incomplete_todos != null && entry.incomplete_todos > 0 && (
+                      <span className={styles.todoBadge} title={`${entry.incomplete_todos} item${entry.incomplete_todos > 1 ? 's' : ''} left`}>
+                        {entry.incomplete_todos}
+                      </span>
+                    )}
                     {entry.url && (
                       <a
                         href={entry.url}

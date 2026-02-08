@@ -171,15 +171,36 @@
   cursor: col-resize;
 }
 
-/* ── Past dates: grayed out ── */
+/* ── Past dates: diagonal stripes ── */
 .past {
-  background: var(--neutral-100);
-  opacity: 0.6;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--neutral-200),
+    var(--neutral-200) 2px,
+    var(--neutral-300) 2px,
+    var(--neutral-300) 4px
+  );
 }
 
 .past:hover {
-  background: var(--neutral-150, var(--neutral-200));
-  opacity: 0.8;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--neutral-250, var(--neutral-300)),
+    var(--neutral-250, var(--neutral-300)) 2px,
+    var(--neutral-350, var(--neutral-400)) 2px,
+    var(--neutral-350, var(--neutral-400)) 4px
+  );
+}
+
+/* ── Past entry cells: grayed out ── */
+.pastEntry {
+  filter: grayscale(60%) brightness(1.1);
+  opacity: 0.7;
+}
+
+.pastEntry:hover {
+  filter: grayscale(40%) brightness(1.05);
+  opacity: 0.85;
 }
 
 /* ── Today: highlighted ── */
@@ -191,4 +212,21 @@
 
 .today:hover {
   background: var(--accent-150, var(--accent-200)) !important;
+}
+
+/* ── Todo badge ── */
+.todoBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  margin-left: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  background: rgba(0, 0, 0, 0.2);
+  color: inherit;
+  flex-shrink: 0;
 }

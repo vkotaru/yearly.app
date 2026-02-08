@@ -18,9 +18,11 @@ router.get('/:year', (req, res) => {
 
   const userId = req.user!.id;
   const entries = db.prepare(`
-    SELECT * FROM entries
-    WHERE year = ? AND (is_private = 0 OR is_private IS NULL OR user_id = ?)
-    ORDER BY month, row_index, day_start
+    SELECT e.*,
+      (SELECT COUNT(*) FROM todos t WHERE t.entry_id = e.id AND t.completed = 0) as incomplete_todos
+    FROM entries e
+    WHERE e.year = ? AND (e.is_private = 0 OR e.is_private IS NULL OR e.user_id = ?)
+    ORDER BY e.month, e.row_index, e.day_start
   `).all(year, userId);
 
   res.json(entries);

@@ -24,6 +24,8 @@ export interface Entry {
   is_private: boolean; // false = shared, true = only creator sees it
   created_at: string;
   updated_at: string;
+  // Computed fields (from JOIN)
+  incomplete_todos?: number;
 }
 
 export interface Comment {
