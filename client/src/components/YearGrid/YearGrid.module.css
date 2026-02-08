@@ -63,6 +63,13 @@
   border-bottom-color: var(--neutral-900);
 }
 
+.headerToday {
+  background: linear-gradient(180deg, var(--success-500) 0%, var(--success-600) 100%) !important;
+  border-bottom-color: var(--success-700);
+  font-weight: 700;
+  box-shadow: inset 0 -3px 0 var(--success-400);
+}
+
 .headerWeekend {
   background: linear-gradient(180deg, var(--neutral-400) 0%, var(--neutral-500) 100%);
   border-bottom-color: var(--neutral-600);

@@ -242,6 +242,10 @@ export default function YearGrid({ year }: Props) {
     return acc;
   }, {});
 
+  // Today's date for header highlighting
+  const today = new Date();
+  const todayDay = today.getDate();
+
   return (
     <div className={styles.wrapper}>
       <div className={styles.mainContent}>
@@ -255,10 +259,15 @@ export default function YearGrid({ year }: Props) {
           <div className={styles.headerLabel}>Month</div>
           {Array.from({ length: 31 }, (_, i) => {
             const day = i + 1;
+            const isTodayHeader = day === todayDay;
             return (
               <div
                 key={i}
-                className={`${styles.headerDay} ${highlightedCol === day ? styles.headerDayActive : ''}`}
+                className={[
+                  styles.headerDay,
+                  highlightedCol === day ? styles.headerDayActive : '',
+                  isTodayHeader ? styles.headerToday : '',
+                ].filter(Boolean).join(' ')}
                 onClick={() => setHighlightedCol(highlightedCol === day ? null : day)}
               >
                 {day}

@@ -36,6 +36,22 @@ export default function MonthRow({
 }: Props) {
   const daysInMonth = getDaysInMonth(year, month);
 
+  // Get today's date info
+  const today = new Date();
+  const todayYear = today.getFullYear();
+  const todayMonth = today.getMonth() + 1; // 1-indexed
+  const todayDay = today.getDate();
+
+  function isToday(day: number): boolean {
+    return year === todayYear && month === todayMonth && day === todayDay;
+  }
+
+  function isPast(day: number): boolean {
+    const cellDate = new Date(year, month - 1, day);
+    const todayStart = new Date(todayYear, todayMonth - 1, todayDay);
+    return cellDate < todayStart;
+  }
+
   // Adjust entries if one is being resized or moved in this month
   const adjustedEntries = useMemo(() => {
     let result = entries;
@@ -176,6 +192,8 @@ export default function MonthRow({
 
               // Empty cell
               const inDrag = isDayInDrag(day, ri);
+              const isTodayCell = isToday(day);
+              const isPastCell = isPast(day);
               return (
                 <div
                   key={di}
@@ -186,6 +204,8 @@ export default function MonthRow({
                     inDrag ? styles.selecting : '',
                     isHighlighted ? styles.colHighlight : '',
                     isLast ? styles.lastRow : '',
+                    isTodayCell ? styles.today : '',
+                    isPastCell ? styles.past : '',
                   ].filter(Boolean).join(' ')}
                   onMouseDown={() => onCellMouseDown(month, day, ri)}
                   onMouseEnter={() => onCellMouseEnter(month, day, ri)}
