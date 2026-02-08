@@ -5,6 +5,7 @@ import { getDaysInMonth } from '../../utils/calendar';
 import MonthRow from '../MonthRow/MonthRow';
 import type { DragState } from '../MonthRow/MonthRow';
 import EntryEditor from '../EntryEditor/EntryEditor';
+import EntryDetailPanel from '../EntryDetailPanel/EntryDetailPanel';
 import CategoryFilter from '../CategoryFilter/CategoryFilter';
 import styles from './YearGrid.module.css';
 
@@ -39,6 +40,7 @@ export default function YearGrid({ year }: Props) {
     () => Object.fromEntries(Array.from({ length: 12 }, (_, i) => [i + 1, 3]))
   );
   const [editor, setEditor] = useState<EditorState | null>(null);
+  const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
   const [drag, setDrag] = useState<DragState | null>(null);
   const [highlightedCol, setHighlightedCol] = useState<number | null>(null);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
@@ -80,13 +82,8 @@ export default function YearGrid({ year }: Props) {
       if (moveIntent.current) {
         const entry = moveIntent.current.entry;
         moveIntent.current = null;
-        setEditor({
-          month: entry.month,
-          dayStart: entry.day_start,
-          dayEnd: entry.day_end,
-          rowIndex: entry.row_index,
-          entry,
-        });
+        // Show side panel instead of full editor
+        setSelectedEntry(entry);
         return;
       }
       // Finish resize
@@ -215,6 +212,19 @@ export default function YearGrid({ year }: Props) {
     await deleteEntry(id);
     await loadEntries();
     setEditor(null);
+    setSelectedEntry(null);
+  }
+
+  function handleEditFromPanel() {
+    if (!selectedEntry) return;
+    setEditor({
+      month: selectedEntry.month,
+      dayStart: selectedEntry.day_start,
+      dayEnd: selectedEntry.day_end,
+      rowIndex: selectedEntry.row_index,
+      entry: selectedEntry,
+    });
+    setSelectedEntry(null);
   }
 
   const categories = useMemo(() => {
@@ -234,51 +244,61 @@ export default function YearGrid({ year }: Props) {
 
   return (
     <div className={styles.wrapper}>
-      <CategoryFilter
-        categories={categories}
-        activeCategory={activeCategory}
-        onSelect={setActiveCategory}
-      />
-      <div className={styles.grid} ref={gridRef}>
-        {/* Header row */}
-        <div className={styles.headerLabel}>Month</div>
-        {Array.from({ length: 31 }, (_, i) => {
-          const day = i + 1;
-          return (
-            <div
-              key={i}
-              className={`${styles.headerDay} ${highlightedCol === day ? styles.headerDayActive : ''}`}
-              onClick={() => setHighlightedCol(highlightedCol === day ? null : day)}
-            >
-              {day}
-            </div>
-          );
-        })}
+      <div className={styles.mainContent}>
+        <CategoryFilter
+          categories={categories}
+          activeCategory={activeCategory}
+          onSelect={setActiveCategory}
+        />
+        <div className={styles.grid} ref={gridRef}>
+          {/* Header row */}
+          <div className={styles.headerLabel}>Month</div>
+          {Array.from({ length: 31 }, (_, i) => {
+            const day = i + 1;
+            return (
+              <div
+                key={i}
+                className={`${styles.headerDay} ${highlightedCol === day ? styles.headerDayActive : ''}`}
+                onClick={() => setHighlightedCol(highlightedCol === day ? null : day)}
+              >
+                {day}
+              </div>
+            );
+          })}
 
-        {/* 12 month rows */}
-        {Array.from({ length: 12 }, (_, i) => {
-          const month = i + 1;
-          return (
-            <MonthRow
-              key={month}
-              year={year}
-              month={month}
-              entries={entriesByMonth[month] || []}
-              minRows={monthRows[month] || 3}
-              drag={drag}
-              highlightedCol={highlightedCol}
-              filteredEntryIds={filteredEntryIds}
-              resize={resize}
-              move={move}
-              onCellMouseDown={handleCellMouseDown}
-              onCellMouseEnter={handleCellMouseEnter}
-              onEntryMouseDown={handleEntryMouseDown}
-              onAddRow={handleAddRow}
-              onResizeStart={handleResizeStart}
-            />
-          );
-        })}
+          {/* 12 month rows */}
+          {Array.from({ length: 12 }, (_, i) => {
+            const month = i + 1;
+            return (
+              <MonthRow
+                key={month}
+                year={year}
+                month={month}
+                entries={entriesByMonth[month] || []}
+                minRows={monthRows[month] || 3}
+                drag={drag}
+                highlightedCol={highlightedCol}
+                filteredEntryIds={filteredEntryIds}
+                resize={resize}
+                move={move}
+                onCellMouseDown={handleCellMouseDown}
+                onCellMouseEnter={handleCellMouseEnter}
+                onEntryMouseDown={handleEntryMouseDown}
+                onAddRow={handleAddRow}
+                onResizeStart={handleResizeStart}
+              />
+            );
+          })}
+        </div>
       </div>
+
+      {selectedEntry && (
+        <EntryDetailPanel
+          entry={selectedEntry}
+          onClose={() => setSelectedEntry(null)}
+          onEdit={handleEditFromPanel}
+        />
+      )}
 
       {editor && (
         <EntryEditor

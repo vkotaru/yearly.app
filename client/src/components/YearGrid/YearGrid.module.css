@@ -1,7 +1,14 @@
 .wrapper {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  user-select: none;
+}
+
+.mainContent {
+  flex: 1;
   overflow-x: auto;
   padding: 20px;
-  user-select: none;
 }
 
 .grid {
