@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import type { Entry, CreateEntryDto, UpdateEntryDto } from '../../../../shared/types';
 import { fetchEntries, createEntry, updateEntry, deleteEntry } from '../../api/entries';
 import { getDaysInMonth } from '../../utils/calendar';
+import { useHistory } from '../../contexts/HistoryContext';
+import type { HistoryAction } from '../../types/history';
 import MonthRow from '../MonthRow/MonthRow';
 import type { DragState } from '../MonthRow/MonthRow';
 import EntryEditor from '../EntryEditor/EntryEditor';
@@ -54,10 +56,133 @@ export default function YearGrid({ year }: Props) {
   const moveIntent = useRef<{ entry: Entry; startX: number } | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
 
+  const { recordAction, registerExecutors } = useHistory();
+
   const loadEntries = useCallback(async () => {
     const data = await fetchEntries(year);
     setEntries(data);
   }, [year]);
+
+  // Execute undo action
+  const executeUndo = useCallback(async (action: HistoryAction) => {
+    switch (action.type) {
+      case 'create':
+        // Undo create = delete the entries
+        for (const entry of action.entries) {
+          await deleteEntry(entry.id);
+        }
+        break;
+      case 'update':
+        // Undo update = restore 'before' state
+        await updateEntry(action.before.id, {
+          title: action.before.title,
+          description: action.before.description,
+          url: action.before.url,
+          category: action.before.category,
+          color: action.before.color,
+          emoji: action.before.emoji,
+          day_start: action.before.day_start,
+          day_end: action.before.day_end,
+          row_index: action.before.row_index,
+          departure_time: action.before.departure_time,
+          arrival_time: action.before.arrival_time,
+          is_private: action.before.is_private,
+          is_tentative: action.before.is_tentative,
+        });
+        break;
+      case 'delete':
+        // Undo delete = recreate entries (will get new IDs)
+        for (const entry of action.entries) {
+          await createEntry({
+            year: entry.year,
+            month: entry.month,
+            day_start: entry.day_start,
+            day_end: entry.day_end,
+            row_index: entry.row_index,
+            title: entry.title,
+            description: entry.description,
+            url: entry.url,
+            category: entry.category,
+            color: entry.color,
+            emoji: entry.emoji,
+            departure_time: entry.departure_time,
+            arrival_time: entry.arrival_time,
+            is_private: entry.is_private,
+            is_tentative: entry.is_tentative,
+          });
+        }
+        break;
+    }
+    await loadEntries();
+  }, [loadEntries]);
+
+  // Execute redo action
+  const executeRedo = useCallback(async (action: HistoryAction) => {
+    switch (action.type) {
+      case 'create':
+        // Redo create = recreate entries
+        for (const entry of action.entries) {
+          await createEntry({
+            year: entry.year,
+            month: entry.month,
+            day_start: entry.day_start,
+            day_end: entry.day_end,
+            row_index: entry.row_index,
+            title: entry.title,
+            description: entry.description,
+            url: entry.url,
+            category: entry.category,
+            color: entry.color,
+            emoji: entry.emoji,
+            departure_time: entry.departure_time,
+            arrival_time: entry.arrival_time,
+            is_private: entry.is_private,
+            is_tentative: entry.is_tentative,
+          });
+        }
+        break;
+      case 'update':
+        // Redo update = apply 'after' state
+        await updateEntry(action.after.id, {
+          title: action.after.title,
+          description: action.after.description,
+          url: action.after.url,
+          category: action.after.category,
+          color: action.after.color,
+          emoji: action.after.emoji,
+          day_start: action.after.day_start,
+          day_end: action.after.day_end,
+          row_index: action.after.row_index,
+          departure_time: action.after.departure_time,
+          arrival_time: action.after.arrival_time,
+          is_private: action.after.is_private,
+          is_tentative: action.after.is_tentative,
+        });
+        break;
+      case 'delete':
+        // Redo delete = delete again (entries may have new IDs after undo)
+        // We need to find matching entries by content
+        const currentEntries = await fetchEntries(year);
+        for (const deletedEntry of action.entries) {
+          const match = currentEntries.find(e =>
+            e.month === deletedEntry.month &&
+            e.day_start === deletedEntry.day_start &&
+            e.day_end === deletedEntry.day_end &&
+            e.title === deletedEntry.title
+          );
+          if (match) {
+            await deleteEntry(match.id);
+          }
+        }
+        break;
+    }
+    await loadEntries();
+  }, [loadEntries, year]);
+
+  // Register undo/redo executors
+  useEffect(() => {
+    registerExecutors(executeUndo, executeRedo);
+  }, [registerExecutors, executeUndo, executeRedo]);
 
   useEffect(() => {
     loadEntries();
@@ -73,7 +198,7 @@ export default function YearGrid({ year }: Props) {
 
   // Global mouseup to finish drag, resize, or move
   useEffect(() => {
-    function handleMouseUp() {
+    async function handleMouseUp() {
       // Finish entry move
       if (isMoving.current && move) {
         isMoving.current = false;
@@ -96,6 +221,7 @@ export default function YearGrid({ year }: Props) {
             return !(newDayEnd < e.day_start || newDayStart > e.day_end);
           });
 
+          let afterEntry: Entry;
           if (hasConflict) {
             // Find a free row_index
             const usedRows = new Set<number>();
@@ -108,18 +234,20 @@ export default function YearGrid({ year }: Props) {
             let freeRow = 0;
             while (usedRows.has(freeRow)) freeRow++;
 
-            updateEntry(movingEntry.id, {
+            afterEntry = await updateEntry(movingEntry.id, {
               day_start: newDayStart,
               day_end: newDayEnd,
               row_index: freeRow,
-            }).then(() => loadEntries());
+            });
           } else {
-            updateEntry(movingEntry.id, {
+            afterEntry = await updateEntry(movingEntry.id, {
               day_start: newDayStart,
               day_end: newDayEnd,
               row_index: newRowIndex,
-            }).then(() => loadEntries());
+            });
           }
+          recordAction({ type: 'update', before: movingEntry, after: afterEntry });
+          await loadEntries();
         }
         setMove(null);
         return;
@@ -147,6 +275,7 @@ export default function YearGrid({ year }: Props) {
             return !(newDayEnd < e.day_start || resizingEntry.day_start > e.day_end);
           });
 
+          let afterEntry: Entry;
           if (hasConflict) {
             // Find a free row_index
             const usedRows = new Set<number>();
@@ -159,12 +288,12 @@ export default function YearGrid({ year }: Props) {
             let freeRow = 0;
             while (usedRows.has(freeRow)) freeRow++;
 
-            updateEntry(resizingEntry.id, { day_end: newDayEnd, row_index: freeRow })
-              .then(() => loadEntries());
+            afterEntry = await updateEntry(resizingEntry.id, { day_end: newDayEnd, row_index: freeRow });
           } else {
-            updateEntry(resizingEntry.id, { day_end: newDayEnd })
-              .then(() => loadEntries());
+            afterEntry = await updateEntry(resizingEntry.id, { day_end: newDayEnd });
           }
+          recordAction({ type: 'update', before: resizingEntry, after: afterEntry });
+          await loadEntries();
         }
         setResize(null);
         return;
@@ -197,7 +326,7 @@ export default function YearGrid({ year }: Props) {
     }
     window.addEventListener('mouseup', handleMouseUp);
     return () => window.removeEventListener('mouseup', handleMouseUp);
-  }, [drag, resize, move, loadEntries]);
+  }, [drag, resize, move, loadEntries, recordAction, entriesByMonth]);
 
   // Global mousemove during resize — compute day from pixel position
   useEffect(() => {
@@ -310,21 +439,41 @@ export default function YearGrid({ year }: Props) {
 
   async function handleSave(dtoOrArray: CreateEntryDto | ({ id: number } & UpdateEntryDto) | (CreateEntryDto | ({ id: number } & UpdateEntryDto))[]) {
     const dtos = Array.isArray(dtoOrArray) ? dtoOrArray : [dtoOrArray];
+    const createdEntries: Entry[] = [];
 
     for (const dto of dtos) {
       if ('id' in dto) {
+        // Update existing entry
         const { id, ...updates } = dto;
-        await updateEntry(id, updates);
+        const beforeEntry = entries.find(e => e.id === id);
+        const afterEntry = await updateEntry(id, updates);
+        if (beforeEntry) {
+          recordAction({ type: 'update', before: beforeEntry, after: afterEntry });
+        }
       } else {
-        await createEntry(dto as CreateEntryDto);
+        // Create new entry
+        const newEntry = await createEntry(dto as CreateEntryDto);
+        createdEntries.push(newEntry);
       }
     }
+
+    // Record batch create action
+    if (createdEntries.length > 0) {
+      recordAction({ type: 'create', entries: createdEntries });
+    }
+
     await loadEntries();
     setEditor(null);
   }
 
   async function handleDelete(id: number) {
+    const entryToDelete = entries.find(e => e.id === id);
     await deleteEntry(id);
+
+    if (entryToDelete) {
+      recordAction({ type: 'delete', entries: [entryToDelete] });
+    }
+
     await loadEntries();
     setEditor(null);
     setSelectedEntry(null);
