@@ -6,10 +6,12 @@ import { computeRowSlots } from '../../utils/entryLayout';
 import styles from './MonthRow.module.css';
 
 export interface DragState {
-  month: number;
-  rowIndex: number;
-  dayStart: number;
-  dayEnd: number;
+  startMonth: number;
+  startDay: number;
+  startRowIndex: number;
+  endMonth: number;
+  endDay: number;
+  endRowIndex: number;
 }
 
 interface Props {
@@ -52,9 +54,12 @@ export default function MonthRow({
     return cellDate < todayStart;
   }
 
-  // Adjust entries if one is being resized or moved in this month
+  // Adjust entries if one is being resized in this month
+  // Moving entries stay at ORIGINAL position - overlay shows new position
   const adjustedEntries = useMemo(() => {
     let result = entries;
+
+    // Include resizing entry with adjusted size
     if (resize && resize.entry.month === month) {
       result = result.map(e =>
         e.id === resize.entry.id
@@ -62,15 +67,15 @@ export default function MonthRow({
           : e
       );
     }
-    if (move && move.entry.month === month) {
-      result = result.map(e =>
-        e.id === move.entry.id
-          ? { ...e, day_start: move.currentDayStart, day_end: move.currentDayStart + move.span }
-          : e
-      );
-    }
+
+    // NOTE: Moving entry is NOT modified here - it stays at original position
+    // The overlay in YearGrid shows the new position
+
     return result;
-  }, [entries, resize, move, month]);
+  }, [entries, resize, month]);
+
+  // Check if an entry is currently being moved (to dim it)
+  const movingEntryId = move?.entry.id;
 
   const rows = useMemo(
     () => computeRowSlots(adjustedEntries, daysInMonth, minRows),
@@ -78,9 +83,53 @@ export default function MonthRow({
   );
 
   function isDayInDrag(day: number, ri: number): boolean {
-    if (!drag || drag.month !== month || drag.rowIndex !== ri) return false;
-    const lo = Math.min(drag.dayStart, drag.dayEnd);
-    const hi = Math.max(drag.dayStart, drag.dayEnd);
+    if (!drag) return false;
+
+    // Normalize start and end (start should be before end chronologically)
+    const startMonth = Math.min(drag.startMonth, drag.endMonth);
+    const endMonth = Math.max(drag.startMonth, drag.endMonth);
+
+    // If this month is outside the drag range
+    if (month < startMonth || month > endMonth) return false;
+
+    // For cross-month drag, use row from start position
+    if (ri !== drag.startRowIndex) return false;
+
+    // Determine the day range for this specific month
+    let lo: number, hi: number;
+
+    if (startMonth === endMonth) {
+      // Same month - simple range
+      lo = Math.min(drag.startDay, drag.endDay);
+      hi = Math.max(drag.startDay, drag.endDay);
+    } else if (drag.startMonth <= drag.endMonth) {
+      // Dragging forward in time
+      if (month === drag.startMonth) {
+        lo = drag.startDay;
+        hi = daysInMonth;
+      } else if (month === drag.endMonth) {
+        lo = 1;
+        hi = drag.endDay;
+      } else {
+        // Middle month - entire month
+        lo = 1;
+        hi = daysInMonth;
+      }
+    } else {
+      // Dragging backward in time
+      if (month === drag.endMonth) {
+        lo = drag.endDay;
+        hi = daysInMonth;
+      } else if (month === drag.startMonth) {
+        lo = 1;
+        hi = drag.startDay;
+      } else {
+        // Middle month - entire month
+        lo = 1;
+        hi = daysInMonth;
+      }
+    }
+
     return day >= lo && day <= hi;
   }
 
@@ -140,7 +189,10 @@ export default function MonthRow({
                 const span = Math.min(entry.day_end, daysInMonth) - entry.day_start + 1;
                 const isDimmed = filteredEntryIds !== null && !filteredEntryIds.has(entry.id);
                 const isEntryPast = isPast(entry.day_end); // Gray out if the entry has ended
+                const isTentative = entry.is_tentative;
+                const isBeingMoved = entry.id === movingEntryId;
                 const tooltip = [
+                  isTentative ? '(Tentative)' : '',
                   entry.title,
                   entry.description,
                   entry.url,
@@ -154,12 +206,13 @@ export default function MonthRow({
                       styles.entryCell,
                       isLast ? styles.lastRow : '',
                       isEntryPast ? styles.pastEntry : '',
+                      isTentative ? styles.tentativeEntry : '',
                     ].filter(Boolean).join(' ')}
                     style={{
                       gridColumn: `span ${span}`,
                       backgroundColor: entry.color,
                       color: textColor(entry.color),
-                      opacity: isDimmed ? 0.2 : 1,
+                      opacity: isBeingMoved ? 0.3 : isDimmed ? 0.2 : 1,
                     }}
                     onMouseDown={(e) => {
                       if (e.button !== 0) return;

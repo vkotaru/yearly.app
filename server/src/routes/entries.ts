@@ -31,7 +31,7 @@ router.get('/:year', (req, res) => {
 // POST /api/entries — auto-set user_id
 router.post('/', (req, res) => {
   const body: CreateEntryDto = req.body;
-  const { year, month, day_start, day_end, row_index, title, description, url, color, category, emoji, departure_time, arrival_time, is_private } = body;
+  const { year, month, day_start, day_end, row_index, title, description, url, color, category, emoji, departure_time, arrival_time, is_private, is_tentative } = body;
 
   if (!year || !month || !day_start || !day_end || row_index == null) {
     res.status(400).json({ error: 'Missing required fields: year, month, day_start, day_end, row_index' });
@@ -45,15 +45,16 @@ router.post('/', (req, res) => {
 
   const userId = req.user!.id;
   const isPrivate = is_private ? 1 : 0;
+  const isTentative = is_tentative ? 1 : 0;
 
   const result = db.prepare(`
-    INSERT INTO entries (year, month, day_start, day_end, row_index, title, description, url, color, category, emoji, departure_time, arrival_time, user_id, is_private)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO entries (year, month, day_start, day_end, row_index, title, description, url, color, category, emoji, departure_time, arrival_time, user_id, is_private, is_tentative)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     year, month, day_start, day_end, row_index,
     title ?? '', description ?? '', url ?? '', color ?? '#3b82f6', category ?? '',
     emoji ?? '', departure_time ?? '', arrival_time ?? '',
-    userId, isPrivate
+    userId, isPrivate, isTentative
   );
 
   const entry = db.prepare('SELECT * FROM entries WHERE id = ?').get(result.lastInsertRowid);
@@ -96,6 +97,7 @@ router.put('/:id', (req, res) => {
   if (body.departure_time != null) { updates.push('departure_time = ?'); values.push(body.departure_time); }
   if (body.arrival_time != null) { updates.push('arrival_time = ?'); values.push(body.arrival_time); }
   if (body.is_private != null) { updates.push('is_private = ?'); values.push(body.is_private ? 1 : 0); }
+  if (body.is_tentative != null) { updates.push('is_tentative = ?'); values.push(body.is_tentative ? 1 : 0); }
 
   if (updates.length === 0) {
     res.status(400).json({ error: 'No fields to update' });

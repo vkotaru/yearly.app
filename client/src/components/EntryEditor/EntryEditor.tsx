@@ -72,6 +72,8 @@ function buildColorString(hex: string, opacity: number): string {
   return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})`;
 }
 
+type SaveDto = CreateEntryDto | ({ id: number } & UpdateEntryDto);
+
 interface Props {
   year: number;
   month: number;
@@ -79,14 +81,16 @@ interface Props {
   dayEnd: number;
   rowIndex: number;
   existingEntry?: Entry;
-  onSave: (dto: CreateEntryDto | { id: number } & UpdateEntryDto) => void;
+  endMonth?: number; // For cross-month selection
+  onSave: (dtos: SaveDto | SaveDto[]) => void;
   onDelete?: (id: number) => void;
   onClose: () => void;
 }
 
 export default function EntryEditor({
-  year, month, dayStart, dayEnd, rowIndex, existingEntry, onSave, onDelete, onClose,
+  year, month, dayStart, dayEnd, rowIndex, existingEntry, endMonth, onSave, onDelete, onClose,
 }: Props) {
+  const isCrossMonth = endMonth !== undefined && endMonth !== month;
   const maxDay = getDaysInMonth(year, month);
   const [title, setTitle] = useState(existingEntry?.title ?? '');
   const [description, setDescription] = useState(existingEntry?.description ?? '');
@@ -110,6 +114,7 @@ export default function EntryEditor({
   const [newComment, setNewComment] = useState('');
   const [loadingComments, setLoadingComments] = useState(false);
   const [isPrivate, setIsPrivate] = useState(existingEntry?.is_private ?? false);
+  const [isTentative, setIsTentative] = useState(existingEntry?.is_tentative ?? false);
   const [todos, setTodos] = useState<Todo[]>([]);
   const [newTodo, setNewTodo] = useState('');
   const [loadingTodos, setLoadingTodos] = useState(false);
@@ -188,7 +193,35 @@ export default function EntryEditor({
         day_start: start,
         day_end: end,
         is_private: isPrivate,
+        is_tentative: isTentative,
       });
+    } else if (isCrossMonth && endMonth) {
+      // Create entries for each month in the range
+      const dtos: CreateEntryDto[] = [];
+      for (let m = month; m <= endMonth; m++) {
+        const mDays = getDaysInMonth(year, m);
+        const mStart = m === month ? dayStart : 1;
+        const mEnd = m === endMonth ? dayEnd : mDays;
+
+        dtos.push({
+          year,
+          month: m,
+          day_start: mStart,
+          day_end: mEnd,
+          row_index: rowIndex,
+          title,
+          description,
+          url,
+          category,
+          emoji,
+          departure_time: departureTime,
+          arrival_time: arrivalTime,
+          color,
+          is_private: isPrivate,
+          is_tentative: isTentative,
+        });
+      }
+      onSave(dtos);
     } else {
       onSave({
         year,
@@ -205,6 +238,7 @@ export default function EntryEditor({
         arrival_time: arrivalTime,
         color,
         is_private: isPrivate,
+        is_tentative: isTentative,
       });
     }
   }
@@ -246,9 +280,11 @@ export default function EntryEditor({
     if (e.key === 'Escape') onClose();
   }
 
-  const spanLabel = dStart === dEnd
-    ? `${getMonthName(month)} ${dStart}`
-    : `${getMonthName(month)} ${dStart} – ${dEnd}`;
+  const spanLabel = isCrossMonth
+    ? `${getMonthName(month)} ${dayStart} – ${getMonthName(endMonth!)} ${dayEnd}`
+    : dStart === dEnd
+      ? `${getMonthName(month)} ${dStart}`
+      : `${getMonthName(month)} ${dStart} – ${dEnd}`;
 
   return (
     <div className={styles.overlay}>
@@ -414,6 +450,14 @@ export default function EntryEditor({
         </div>
 
         <div className={styles.privacySection}>
+          <label className={styles.privacyToggle}>
+            <input
+              type="checkbox"
+              checked={isTentative}
+              onChange={(e) => setIsTentative(e.target.checked)}
+            />
+            <span>Tentative (unconfirmed plan)</span>
+          </label>
           <label className={styles.privacyToggle}>
             <input
               type="checkbox"

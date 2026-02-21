@@ -25,6 +25,7 @@ export interface Entry {
   arrival_time: string;   // travel arrival info
   user_id?: number;    // owner (null for legacy entries)
   is_private: boolean; // false = shared, true = only creator sees it
+  is_tentative: boolean; // true = tentative/unconfirmed plan
   created_at: string;
   updated_at: string;
   // Computed fields (from JOIN)
@@ -55,6 +56,7 @@ export interface CreateEntryDto {
   departure_time?: string;
   arrival_time?: string;
   is_private?: boolean;
+  is_tentative?: boolean;
 }
 
 export interface UpdateEntryDto {
@@ -70,6 +72,7 @@ export interface UpdateEntryDto {
   departure_time?: string;
   arrival_time?: string;
   is_private?: boolean;
+  is_tentative?: boolean;
 }
 
 export interface CreateCommentDto {

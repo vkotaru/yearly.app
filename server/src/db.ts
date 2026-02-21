@@ -95,6 +95,9 @@ if (!entryColNames.includes('departure_time')) {
 if (!entryColNames.includes('arrival_time')) {
   try { db.exec(`ALTER TABLE entries ADD COLUMN arrival_time TEXT DEFAULT ''`); } catch { /* exists */ }
 }
+if (!entryColNames.includes('is_tentative')) {
+  try { db.exec(`ALTER TABLE entries ADD COLUMN is_tentative INTEGER DEFAULT 0`); } catch { /* exists */ }
+}
 
 // ── Migrate comments: add user_id ──
 const commentCols = db.prepare("PRAGMA table_info(comments)").all() as { name: string }[];

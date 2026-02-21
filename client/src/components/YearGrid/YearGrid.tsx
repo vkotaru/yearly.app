@@ -19,6 +19,7 @@ export interface MoveState {
   entry: Entry;
   grabOffset: number;
   currentDayStart: number;
+  currentRowIndex: number;
   span: number;
 }
 
@@ -28,6 +29,7 @@ interface EditorState {
   dayEnd: number;
   rowIndex: number;
   entry?: Entry;
+  endMonth?: number; // For cross-month selection
 }
 
 interface Props {
@@ -61,6 +63,14 @@ export default function YearGrid({ year }: Props) {
     loadEntries();
   }, [loadEntries]);
 
+  // Group entries by month (needed early for move calculations)
+  const entriesByMonth = useMemo(() => {
+    return entries.reduce<Record<number, Entry[]>>((acc, e) => {
+      (acc[e.month] ??= []).push(e);
+      return acc;
+    }, {});
+  }, [entries]);
+
   // Global mouseup to finish drag, resize, or move
   useEffect(() => {
     function handleMouseUp() {
@@ -68,12 +78,48 @@ export default function YearGrid({ year }: Props) {
       if (isMoving.current && move) {
         isMoving.current = false;
         moveIntent.current = null;
-        if (move.currentDayStart !== move.entry.day_start) {
-          const newDayEnd = move.currentDayStart + move.span;
-          updateEntry(move.entry.id, {
-            day_start: move.currentDayStart,
-            day_end: newDayEnd,
-          }).then(() => loadEntries());
+        const newDayStart = move.currentDayStart;
+        const newDayEnd = newDayStart + move.span;
+        const newRowIndex = move.currentRowIndex;
+        const movingEntry = move.entry;
+
+        // Check if anything changed
+        const positionChanged = newDayStart !== movingEntry.day_start || newRowIndex !== movingEntry.row_index;
+
+        if (positionChanged) {
+          // Check for conflicts with other entries on the target row_index
+          const monthEntries = entriesByMonth[movingEntry.month] || [];
+          const hasConflict = monthEntries.some(e => {
+            if (e.id === movingEntry.id) return false; // Skip self
+            if (e.row_index !== newRowIndex) return false; // Different row
+            // Check day overlap
+            return !(newDayEnd < e.day_start || newDayStart > e.day_end);
+          });
+
+          if (hasConflict) {
+            // Find a free row_index
+            const usedRows = new Set<number>();
+            for (const e of monthEntries) {
+              if (e.id === movingEntry.id) continue;
+              if (!(newDayEnd < e.day_start || newDayStart > e.day_end)) {
+                usedRows.add(e.row_index);
+              }
+            }
+            let freeRow = 0;
+            while (usedRows.has(freeRow)) freeRow++;
+
+            updateEntry(movingEntry.id, {
+              day_start: newDayStart,
+              day_end: newDayEnd,
+              row_index: freeRow,
+            }).then(() => loadEntries());
+          } else {
+            updateEntry(movingEntry.id, {
+              day_start: newDayStart,
+              day_end: newDayEnd,
+              row_index: newRowIndex,
+            }).then(() => loadEntries());
+          }
         }
         setMove(null);
         return;
@@ -90,8 +136,35 @@ export default function YearGrid({ year }: Props) {
       if (isResizing.current && resize) {
         isResizing.current = false;
         if (resize.currentDayEnd !== resize.originalDayEnd) {
-          updateEntry(resize.entry.id, { day_end: resize.currentDayEnd })
-            .then(() => loadEntries());
+          const resizingEntry = resize.entry;
+          const newDayEnd = resize.currentDayEnd;
+
+          // Check for conflicts with other entries on the same row_index
+          const monthEntries = entriesByMonth[resizingEntry.month] || [];
+          const hasConflict = monthEntries.some(e => {
+            if (e.id === resizingEntry.id) return false;
+            if (e.row_index !== resizingEntry.row_index) return false;
+            return !(newDayEnd < e.day_start || resizingEntry.day_start > e.day_end);
+          });
+
+          if (hasConflict) {
+            // Find a free row_index
+            const usedRows = new Set<number>();
+            for (const e of monthEntries) {
+              if (e.id === resizingEntry.id) continue;
+              if (!(newDayEnd < e.day_start || resizingEntry.day_start > e.day_end)) {
+                usedRows.add(e.row_index);
+              }
+            }
+            let freeRow = 0;
+            while (usedRows.has(freeRow)) freeRow++;
+
+            updateEntry(resizingEntry.id, { day_end: newDayEnd, row_index: freeRow })
+              .then(() => loadEntries());
+          } else {
+            updateEntry(resizingEntry.id, { day_end: newDayEnd })
+              .then(() => loadEntries());
+          }
         }
         setResize(null);
         return;
@@ -99,13 +172,25 @@ export default function YearGrid({ year }: Props) {
       // Finish drag-to-create
       if (isDragging.current && drag) {
         isDragging.current = false;
-        const lo = Math.min(drag.dayStart, drag.dayEnd);
-        const hi = Math.max(drag.dayStart, drag.dayEnd);
+
+        // Normalize so start is before end chronologically
+        let startMonth = drag.startMonth;
+        let startDay = drag.startDay;
+        let endMonth = drag.endMonth;
+        let endDay = drag.endDay;
+
+        if (startMonth > endMonth || (startMonth === endMonth && startDay > endDay)) {
+          [startMonth, endMonth] = [endMonth, startMonth];
+          [startDay, endDay] = [endDay, startDay];
+        }
+
         setEditor({
-          month: drag.month,
-          dayStart: lo,
-          dayEnd: hi,
-          rowIndex: drag.rowIndex,
+          month: startMonth,
+          dayStart: startDay,
+          dayEnd: endDay,
+          rowIndex: drag.startRowIndex,
+          // Pass end month for cross-month support
+          endMonth: endMonth !== startMonth ? endMonth : undefined,
         });
         setDrag(null);
       }
@@ -144,29 +229,49 @@ export default function YearGrid({ year }: Props) {
         const grabDay = Math.max(1, Math.floor(xInGrid / 40) + 1);
         const grabOffset = grabDay - entry.day_start;
         const span = entry.day_end - entry.day_start;
-        setMove({ entry, grabOffset, currentDayStart: entry.day_start, span });
+        setMove({ entry, grabOffset, currentDayStart: entry.day_start, currentRowIndex: entry.row_index, span });
       }
     }
     window.addEventListener('mousemove', handleMouseMove);
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, [year]);
 
-  // Global mousemove during move — compute new day_start from pixel position
+  // Global mousemove during move — compute new day_start and row from pixel position
   useEffect(() => {
     if (!move) return;
     function handleMouseMove(e: MouseEvent) {
       if (!isMoving.current || !move || !gridRef.current) return;
       const gridRect = gridRef.current.getBoundingClientRect();
+
+      // Horizontal position (day)
       const xInGrid = e.clientX - gridRect.left - 72;
       const dayAtMouse = Math.floor(xInGrid / 40) + 1;
       const newDayStart = dayAtMouse - move.grabOffset;
       const maxDay = getDaysInMonth(year, move.entry.month);
       const clampedStart = Math.max(1, Math.min(newDayStart, maxDay - move.span));
-      setMove(prev => prev ? { ...prev, currentDayStart: clampedStart } : null);
+
+      // Vertical position (row within the entry's month)
+      const yInGrid = e.clientY - gridRect.top;
+      const headerHeight = 32; // Header row height (with padding)
+      let yOffset = headerHeight;
+
+      // Find the y range for the entry's month
+      for (let m = 1; m < move.entry.month; m++) {
+        const mEntries = entriesByMonth[m] || [];
+        const mRows = monthRows[m] || 3;
+        const maxRow = mEntries.reduce((max, ent) => Math.max(max, ent.row_index), mRows - 1);
+        yOffset += (maxRow + 1) * 24;
+      }
+
+      // Calculate row within the month
+      const yInMonth = yInGrid - yOffset;
+      const rowAtMouse = Math.max(0, Math.floor(yInMonth / 24));
+
+      setMove(prev => prev ? { ...prev, currentDayStart: clampedStart, currentRowIndex: rowAtMouse } : null);
     }
     window.addEventListener('mousemove', handleMouseMove);
     return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, [move, year]);
+  }, [move, year, entriesByMonth, monthRows]);
 
   function handleEntryMouseDown(entry: Entry, clientX: number) {
     moveIntent.current = { entry, startX: clientX };
@@ -174,14 +279,20 @@ export default function YearGrid({ year }: Props) {
 
   function handleCellMouseDown(month: number, day: number, rowIndex: number) {
     isDragging.current = true;
-    setDrag({ month, rowIndex, dayStart: day, dayEnd: day });
+    setDrag({
+      startMonth: month,
+      startDay: day,
+      startRowIndex: rowIndex,
+      endMonth: month,
+      endDay: day,
+      endRowIndex: rowIndex,
+    });
   }
 
   function handleCellMouseEnter(month: number, day: number, rowIndex: number) {
     if (!isDragging.current || !drag) return;
-    // Only extend within same month + row
-    if (month !== drag.month || rowIndex !== drag.rowIndex) return;
-    setDrag((prev) => prev ? { ...prev, dayEnd: day } : null);
+    // Allow cross-month drag but keep the same row
+    setDrag((prev) => prev ? { ...prev, endMonth: month, endDay: day, endRowIndex: rowIndex } : null);
   }
 
   function handleResizeStart(entry: Entry) {
@@ -197,12 +308,16 @@ export default function YearGrid({ year }: Props) {
     setMonthRows((prev) => ({ ...prev, [month]: (prev[month] || 3) + 1 }));
   }
 
-  async function handleSave(dto: CreateEntryDto | ({ id: number } & UpdateEntryDto)) {
-    if ('id' in dto) {
-      const { id, ...updates } = dto;
-      await updateEntry(id, updates);
-    } else {
-      await createEntry(dto);
+  async function handleSave(dtoOrArray: CreateEntryDto | ({ id: number } & UpdateEntryDto) | (CreateEntryDto | ({ id: number } & UpdateEntryDto))[]) {
+    const dtos = Array.isArray(dtoOrArray) ? dtoOrArray : [dtoOrArray];
+
+    for (const dto of dtos) {
+      if ('id' in dto) {
+        const { id, ...updates } = dto;
+        await updateEntry(id, updates);
+      } else {
+        await createEntry(dto as CreateEntryDto);
+      }
     }
     await loadEntries();
     setEditor(null);
@@ -236,11 +351,6 @@ export default function YearGrid({ year }: Props) {
     if (!activeCategory) return null;
     return new Set(entries.filter(e => e.category === activeCategory).map(e => e.id));
   }, [entries, activeCategory]);
-
-  const entriesByMonth = entries.reduce<Record<number, Entry[]>>((acc, e) => {
-    (acc[e.month] ??= []).push(e);
-    return acc;
-  }, {});
 
   // Today's date for header highlighting
   const today = new Date();
@@ -298,6 +408,62 @@ export default function YearGrid({ year }: Props) {
               />
             );
           })}
+
+          {/* Moving entry overlay - floats above grid to not push other entries */}
+          {move && (() => {
+            const entry = move.entry;
+            const span = move.span + 1;
+            const currentDayStart = move.currentDayStart;
+            const currentRowIndex = move.currentRowIndex;
+
+            // Calculate top position: header + sum of rows for previous months + currentRowIndex
+            let topOffset = 32; // header row (with padding)
+            for (let m = 1; m < entry.month; m++) {
+              const rows = monthRows[m] || 3;
+              const mEntries = entriesByMonth[m] || [];
+              const maxRow = mEntries.reduce((max, e) => Math.max(max, e.row_index), rows - 1);
+              topOffset += (maxRow + 1) * 24;
+            }
+            topOffset += currentRowIndex * 24;
+
+            // Calculate left position: month label + day offset
+            const leftOffset = 72 + (currentDayStart - 1) * 40;
+
+            return (
+              <div
+                className={styles.movingOverlay}
+                style={{
+                  position: 'absolute',
+                  top: `${topOffset}px`,
+                  left: `${leftOffset}px`,
+                  width: `${span * 40 - 2}px`,
+                  height: '22px',
+                  backgroundColor: entry.color,
+                  borderRadius: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '0 6px',
+                  cursor: 'grabbing',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+                  zIndex: 100,
+                  pointerEvents: 'none',
+                  opacity: 0.9,
+                }}
+              >
+                {entry.emoji && <span style={{ marginRight: '4px' }}>{entry.emoji}</span>}
+                <span style={{
+                  fontSize: '11px',
+                  fontWeight: 500,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  color: '#fff',
+                }}>
+                  {entry.title}
+                </span>
+              </div>
+            );
+          })()}
         </div>
       </div>
 
@@ -317,6 +483,7 @@ export default function YearGrid({ year }: Props) {
           dayEnd={editor.dayEnd}
           rowIndex={editor.rowIndex}
           existingEntry={editor.entry}
+          endMonth={editor.endMonth}
           onSave={handleSave}
           onDelete={handleDelete}
           onClose={() => setEditor(null)}

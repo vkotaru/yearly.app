@@ -20,6 +20,12 @@
   overflow: hidden;
   box-shadow: var(--shadow-md);
   background: var(--bg-surface);
+  position: relative; /* For moving entry overlay */
+}
+
+/* Moving entry overlay */
+.movingOverlay {
+  transition: none;
 }
 
 /* ── Header row ── */
