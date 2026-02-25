@@ -173,7 +173,7 @@ WAL mode is enabled for better concurrent read performance (important for multi-
 - **Railway**: Single service, `nixpacks.toml` installs dev deps for TypeScript compilation
 - **Static serving**: In production, Express serves `client/dist` and falls back to `index.html` for SPA routing
 - **Persistent storage**: Railway volume mounted at `/data`, path injected via `DATABASE_PATH` env var
-- **CORS**: Explicit allowlist with a catch-all for `*.railway.app` in production
+- **CORS**: Explicit allowlist using `FRONTEND_URL` env var (no wildcard)
 
 ### 2.10 Settings
 
@@ -206,8 +206,10 @@ const match = currentEntries.find(e =>
 ```
 This fuzzy match can silently delete the wrong entry if two entries share the same start/end/title. The correct fix is to track the recreated entry's new ID after undo-of-delete and use that for redo-of-delete.
 
-#### F3 — No input validation on `category` and `url` fields
-Category is free-text with no normalization (case, trimming). URL has no validation — any string is accepted and rendered as an `<a href>`. A malicious user could inject `javascript:` URLs.
+#### ~~F3 — No input validation on `category` and `url` fields~~ ✅ FIXED
+~~Category is free-text with no normalization (case, trimming). URL has no validation — any string is accepted and rendered as an `<a href>`. A malicious user could inject `javascript:` URLs.~~
+
+**Fix:** Added `isValidUrl()` validation in `server/src/routes/entries.ts` that only allows `http://` and `https://` URLs.
 
 #### F4 — `row_index` is the stored layout position, not computed
 Entries store their `row_index` in the database. When an entry is dragged to a free slot, the conflict check is simple. But if two users concurrently drag entries to the same row, there's no server-side conflict resolution — whichever `PUT` lands last wins, potentially causing visible overlap.
@@ -225,16 +227,19 @@ Every user types categories manually. Typos silently create new categories (`Tra
 #### F7 — No real-time collaboration
 The app is multi-user but not real-time. If User A creates an entry while User B has the page open, User B won't see it until they refresh. There's no polling, WebSocket, or Server-Sent Events mechanism.
 
-#### F8 — Entry color stored as `rgba(...)` string breaks `getTextColor`
-`getTextColor()` only handles hex colors:
+#### ~~F8 — Entry color stored as `rgba(...)` string breaks `getTextColor`~~ ✅ FIXED
+~~`getTextColor()` only handles hex colors:~~
 ```typescript
+// OLD CODE - now fixed
 export function getTextColor(bgColor: string): string {
   const hex = bgColor.replace('#', '');
   if (hex.length < 6) return '#fff';  // silently returns white for rgba strings
   ...
 }
 ```
-Entries with rgba colors (opacity < 1) will always show white text, even on very light, nearly-transparent backgrounds. This is a silent visual bug.
+~~Entries with rgba colors (opacity < 1) will always show white text, even on very light, nearly-transparent backgrounds. This is a silent visual bug.~~
+
+**Fix:** Updated `getTextColor()` in `client/src/utils/entryPosition.ts` to parse rgba/rgb colors before falling back to hex.
 
 #### F9 — `MonthRow` creates `new Date()` inside every render
 ```typescript
@@ -249,23 +254,31 @@ With 12 MonthRows × potentially many re-renders (during drag), this creates hun
 
 ### 3.3 Security
 
-#### F11 — Legacy entries (`user_id = null`) are editable by anyone
-The ownership check explicitly allows edits to legacy entries:
+#### ~~F11 — Legacy entries (`user_id = null`) are editable by anyone~~ ✅ FIXED
+~~The ownership check explicitly allows edits to legacy entries:~~
 ```typescript
+// OLD CODE - now fixed
 if (existing.user_id !== null && existing.user_id !== req.user!.id) {
   res.status(403).json({ error: 'Forbidden' });
 }
 ```
-Any authenticated user can edit or delete entries with `user_id = null`. If legacy entries contain important historical data, this is a data integrity risk.
+~~Any authenticated user can edit or delete entries with `user_id = null`. If legacy entries contain important historical data, this is a data integrity risk.~~
 
-#### F12 — JWT payload contains full user row (name, picture, email)
-`createToken` embeds the user object. If the user updates their Google profile, the JWT carries stale info until it expires. More importantly, the token contains PII in the payload (though not the signature). The payload should contain only `userId`.
+**Fix:** Simplified ownership check to `existing.user_id !== req.user.id`. Entries with `user_id = null` are no longer supported and will be rejected by the ownership check.
 
-#### F13 — CORS allows any `*.railway.app` domain in production
+#### ~~F12 — JWT payload contains full user row (name, picture, email)~~ ✅ FIXED
+~~`createToken` embeds the user object. If the user updates their Google profile, the JWT carries stale info until it expires. More importantly, the token contains PII in the payload (though not the signature). The payload should contain only `userId`.~~
+
+**Fix:** JWT payload in `server/src/utils/jwt.ts` now contains only `userId`, `iat`, and `exp`. Email removed from payload.
+
+#### ~~F13 — CORS allows any `*.railway.app` domain in production~~ ✅ FIXED
 ```typescript
+// OLD CODE - now fixed
 origin.includes('.railway.app')
 ```
-This allows any Railway deployment (not just yours) to make credentialed requests to your API. If a malicious actor deploys to Railway, they can make cross-origin requests with cookies.
+~~This allows any Railway deployment (not just yours) to make credentialed requests to your API. If a malicious actor deploys to Railway, they can make cross-origin requests with cookies.~~
+
+**Fix:** Removed wildcard Railway check in `server/src/index.ts`. CORS now only allows origins in the explicit `allowedOrigins` list (localhost + `FRONTEND_URL` env var).
 
 ---
 
@@ -308,8 +321,9 @@ const [year, setYear] = useState(new Date().getFullYear());
 
 The `GET /api/entries/:year` endpoint already works for any year — the backend needs no changes.
 
-#### I2 — Fix `getTextColor` for rgba colors
+#### ~~I2 — Fix `getTextColor` for rgba colors~~ ✅ IMPLEMENTED
 ```typescript
+// Now implemented in client/src/utils/entryPosition.ts
 export function getTextColor(bgColor: string): string {
   // Try rgba first
   const rgbaMatch = bgColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
@@ -322,8 +336,10 @@ export function getTextColor(bgColor: string): string {
 }
 ```
 
-#### I3 — Fix CORS to use a specific origin allowlist
-Store the production frontend URL in an env var and check against it exactly, not with `.includes('.railway.app')`.
+#### ~~I3 — Fix CORS to use a specific origin allowlist~~ ✅ IMPLEMENTED
+~~Store the production frontend URL in an env var and check against it exactly, not with `.includes('.railway.app')`.~~
+
+**Done:** CORS now uses exact match against `FRONTEND_URL` env var only.
 
 #### I4 — Fix undo/redo history for deleted entries with todos/comments
 When recording a delete action, also snapshot the entry's todos and comments. When undoing, recreate the entry then re-POST all todos and comments.
@@ -337,8 +353,10 @@ type DeleteAction = {
 };
 ```
 
-#### I5 — Sanitize URL field
-On save, validate that URL starts with `http://` or `https://` (or is empty). Reject `javascript:` and other dangerous schemes.
+#### ~~I5 — Sanitize URL field~~ ✅ IMPLEMENTED
+~~On save, validate that URL starts with `http://` or `https://` (or is empty). Reject `javascript:` and other dangerous schemes.~~
+
+**Done:** Added `isValidUrl()` helper in `server/src/routes/entries.ts` that validates URLs in both POST and PUT handlers.
 
 ---
 
@@ -423,17 +441,19 @@ Compute the current date once in `YearGrid` and pass `todayYear`, `todayMonth`, 
 
 ## Summary Matrix
 
-| ID | Category | Severity | Effort |
-|----|----------|----------|--------|
-| F1 / I1 | Hard-coded year | 🔴 High | Low |
-| F2 / I4 | Undo delete fuzzy match | 🔴 High | Medium |
-| F8 / I2 | rgba text color bug | 🟠 Medium | Low |
-| F13 / I3 | CORS over-permissive | 🔴 High | Low |
-| F14 / I9 | God component | 🟡 Low | High |
-| F16 / I4 | Undo loses todos/comments | 🔴 High | Medium |
-| I5 | URL sanitization | 🔴 High | Low |
-| I6 | Real-time SSE | 🟠 Medium | Medium |
-| I7 | Category autocomplete | 🟡 Low | Low |
-| I8 | Error boundaries | 🟠 Medium | Low |
-| I10 | Server-side settings | 🟡 Low | Medium |
-| I11–I20 | Feature additions | 🟢 Nice | Varies |
+| ID | Category | Severity | Effort | Status |
+|----|----------|----------|--------|--------|
+| F1 / I1 | Hard-coded year | 🔴 High | Low | Open |
+| F2 / I4 | Undo delete fuzzy match | 🔴 High | Medium | Open |
+| ~~F3 / I5~~ | ~~URL sanitization~~ | ~~🔴 High~~ | ~~Low~~ | ✅ Fixed |
+| ~~F8 / I2~~ | ~~rgba text color bug~~ | ~~🟠 Medium~~ | ~~Low~~ | ✅ Fixed |
+| ~~F11~~ | ~~Legacy entries editable~~ | ~~🔴 High~~ | ~~Low~~ | ✅ Fixed |
+| ~~F12~~ | ~~JWT contains PII~~ | ~~🟡 Low~~ | ~~Low~~ | ✅ Fixed |
+| ~~F13 / I3~~ | ~~CORS over-permissive~~ | ~~🔴 High~~ | ~~Low~~ | ✅ Fixed |
+| F14 / I9 | God component | 🟡 Low | High | Open |
+| F16 / I4 | Undo loses todos/comments | 🔴 High | Medium | Open |
+| I6 | Real-time SSE | 🟠 Medium | Medium | Open |
+| I7 | Category autocomplete | 🟡 Low | Low | Open |
+| I8 | Error boundaries | 🟠 Medium | Low | Open |
+| I10 | Server-side settings | 🟡 Low | Medium | Open |
+| I11–I20 | Feature additions | 🟢 Nice | Varies | Open |

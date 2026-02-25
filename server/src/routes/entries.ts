@@ -5,6 +5,17 @@ import type { CreateEntryDto, UpdateEntryDto, CreateCommentDto, CreateTodoDto, U
 
 const router = Router();
 
+// URL validation: only allow http/https or empty
+function isValidUrl(url: string | undefined | null): boolean {
+  if (!url || url.trim() === '') return true;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 // Apply auth middleware to all routes
 router.use(requireAuth);
 
@@ -51,6 +62,12 @@ router.post('/', (req, res) => {
     return;
   }
 
+  // Validate URL to prevent XSS via javascript: or other dangerous schemes
+  if (!isValidUrl(url)) {
+    res.status(400).json({ error: 'Invalid URL: must be http:// or https://' });
+    return;
+  }
+
   const userId = req.user!.id;
   const isPrivate = is_private ? 1 : 0;
   const isTentative = is_tentative ? 1 : 0;
@@ -83,13 +100,20 @@ router.put('/:id', (req, res) => {
     return;
   }
 
-  // Ownership check: only owner can edit (legacy entries with null user_id can be edited by anyone)
-  if (existing.user_id !== null && existing.user_id !== req.user!.id) {
+  // Ownership check: only owner can edit their entries
+  if (existing.user_id !== req.user!.id) {
     res.status(403).json({ error: 'Forbidden - you can only edit your own entries' });
     return;
   }
 
   const body: UpdateEntryDto = req.body;
+
+  // Validate URL if provided
+  if (body.url !== undefined && !isValidUrl(body.url)) {
+    res.status(400).json({ error: 'Invalid URL: must be http:// or https://' });
+    return;
+  }
+
   const updates: string[] = [];
   const values: unknown[] = [];
 
@@ -136,8 +160,8 @@ router.delete('/:id', (req, res) => {
     return;
   }
 
-  // Ownership check
-  if (existing.user_id !== null && existing.user_id !== req.user!.id) {
+  // Ownership check: only owner can delete their entries
+  if (existing.user_id !== req.user!.id) {
     res.status(403).json({ error: 'Forbidden - you can only delete your own entries' });
     return;
   }
@@ -223,8 +247,8 @@ router.delete('/comments/:commentId', (req, res) => {
     return;
   }
 
-  // Ownership check (legacy comments with null user_id can be deleted by anyone)
-  if (comment.user_id !== null && comment.user_id !== req.user!.id) {
+  // Ownership check: only owner can delete their comments
+  if (comment.user_id !== req.user!.id) {
     res.status(403).json({ error: 'Forbidden - you can only delete your own comments' });
     return;
   }

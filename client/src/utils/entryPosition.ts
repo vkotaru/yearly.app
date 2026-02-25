@@ -178,8 +178,20 @@ export function calculateGridHeight(monthOffsets: MonthRowInfo[]): number {
 
 /**
  * Determine text color (black or white) based on background luminance.
+ * Handles both hex (#rrggbb) and rgba(r, g, b, a) color formats.
  */
 export function getTextColor(bgColor: string): string {
+  // Try rgba/rgb first
+  const rgbaMatch = bgColor.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+  if (rgbaMatch) {
+    const r = parseInt(rgbaMatch[1], 10);
+    const g = parseInt(rgbaMatch[2], 10);
+    const b = parseInt(rgbaMatch[3], 10);
+    const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return lum > 0.6 ? '#000' : '#fff';
+  }
+
+  // Fall back to hex parsing
   const hex = bgColor.replace('#', '');
   if (hex.length < 6) return '#fff';
   const r = parseInt(hex.slice(0, 2), 16);

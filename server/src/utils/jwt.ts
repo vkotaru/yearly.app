@@ -5,7 +5,6 @@ const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('he
 
 interface JWTPayload {
   userId: number;
-  email: string;
   iat: number;
   exp: number;
 }
@@ -30,7 +29,6 @@ export function createToken(user: User): string {
 
   const payload: JWTPayload = {
     userId: user.id,
-    email: user.email,
     iat: now,
     exp: now + expiresIn,
   };

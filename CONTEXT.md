@@ -200,6 +200,7 @@ yearly.app/
 GOOGLE_CLIENT_ID=your-google-client-id
 JWT_SECRET=your-secret-key
 DATABASE_PATH=/data/yearly.db  # Railway volume
+FRONTEND_URL=https://your-app.up.railway.app  # Required for CORS in production
 ```
 
 ### Client (`client/.env`)
@@ -229,8 +230,8 @@ npm run build
 1. **Build**: Uses `nixpacks.toml` to install dev dependencies for TypeScript compilation
 2. **Start**: Runs `npm start` which starts the Express server
 3. **Volume**: Mount `/data` for persistent SQLite storage
-4. **Environment**: Set `DATABASE_PATH=/data/yearly.db`
-5. **CORS**: Server allows `.railway.app` domains
+4. **Environment**: Set `DATABASE_PATH=/data/yearly.db` and `FRONTEND_URL=https://your-app.up.railway.app`
+5. **CORS**: Server allows only the explicit `FRONTEND_URL` origin (no wildcard)
 
 ---
 
