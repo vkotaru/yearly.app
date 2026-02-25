@@ -1,0 +1,134 @@
+/* Entry overlay - positioned absolutely on top of the grid */
+.entryOverlay {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  padding: 0 6px;
+  border-radius: var(--radius-sm);
+  cursor: grab;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  transition: filter var(--transition-fast), opacity var(--transition-normal), transform var(--transition-fast);
+  z-index: 10;
+}
+
+.entryOverlay:hover {
+  filter: brightness(0.95);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  z-index: 11;
+}
+
+.entryOverlay:active {
+  cursor: grabbing;
+  transform: translateY(0);
+}
+
+/* Cross-month continuation styling - flat edges where segments connect */
+.continuationLeft {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.continuationRight {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+/* Past entries: grayed out */
+.past {
+  filter: grayscale(60%) brightness(1.1);
+  opacity: 0.7;
+}
+
+.past:hover {
+  filter: grayscale(40%) brightness(1.05);
+  opacity: 0.85;
+}
+
+/* Tentative entries: dashed border */
+.tentative {
+  border: 2px dashed currentColor;
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 3px,
+    rgba(255, 255, 255, 0.15) 3px,
+    rgba(255, 255, 255, 0.15) 6px
+  ),
+  var(--entry-bg-color);
+  background-size: 100% 100%, 100% 100%;
+}
+
+.tentative::before {
+  content: '?';
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px;
+  font-weight: 700;
+  opacity: 0.6;
+}
+
+/* Entry content */
+.emoji {
+  flex-shrink: 0;
+  font-size: 12px;
+  margin-right: 4px;
+}
+
+.title {
+  font-size: calc(var(--font-size, 13px) - 2px);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 0.1px;
+}
+
+/* Todo badge */
+.todoBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  margin-left: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  background: rgba(0, 0, 0, 0.2);
+  color: inherit;
+  flex-shrink: 0;
+}
+
+/* URL link icon */
+.linkIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  color: inherit;
+  opacity: 0.4;
+  transition: opacity var(--transition-fast);
+}
+
+.linkIcon:hover {
+  opacity: 1;
+}
+
+/* Resize handle on right edge */
+.resizeHandle {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+}

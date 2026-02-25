@@ -99,6 +99,15 @@ if (!entryColNames.includes('is_tentative')) {
   try { db.exec(`ALTER TABLE entries ADD COLUMN is_tentative INTEGER DEFAULT 0`); } catch { /* exists */ }
 }
 
+// ── Migrate entries: add end_month for cross-month entries ──
+if (!entryColNames.includes('end_month')) {
+  try {
+    db.exec(`ALTER TABLE entries ADD COLUMN end_month INTEGER`);
+    // Backfill: existing entries have end_month = month (single-month entries)
+    db.exec(`UPDATE entries SET end_month = month WHERE end_month IS NULL`);
+  } catch { /* exists */ }
+}
+
 // ── Migrate comments: add user_id ──
 const commentCols = db.prepare("PRAGMA table_info(comments)").all() as { name: string }[];
 const commentColNames = commentCols.map((c) => c.name);

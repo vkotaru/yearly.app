@@ -1,26 +1,67 @@
+/* ── Outer wrapper: fills the scrollable <main> ── */
 .wrapper {
   display: flex;
   flex: 1;
-  overflow: hidden;
+  min-height: 100%;
   user-select: none;
 }
 
+/* ── Main content area: centers the grid ── */
 .mainContent {
   flex: 1;
   overflow-x: auto;
-  padding: 20px;
+  padding: 0 20px 20px;
 }
 
+/* ── Sticky toolbar: contains the CategoryFilter chips ── */
+.toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--bg-app);
+  border-bottom: 1px solid var(--border-default);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  margin: 0 -20px;
+  /* bleed to cover the mainContent padding */
+  padding: 0 20px;
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+}
+
+/* ── Centering container for the grid ── */
+.gridCenter {
+  width: fit-content;
+  /* shrink-wrap the grid so margin:auto can center it */
+  margin: 20px auto 0;
+}
+
+/* ── The CSS Grid ── */
 .grid {
   display: grid;
   grid-template-columns: 72px repeat(31, 40px);
   width: fit-content;
+  /* Remove overflow:hidden so sticky headers work; use box-shadow for appearance */
   border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
-  overflow: hidden;
   box-shadow: var(--shadow-md);
   background: var(--bg-surface);
-  position: relative; /* For moving entry overlay */
+  position: relative;
+  /* For moving entry overlay */
+}
+
+/* Entry overlay layer - positioned on top of background grid */
+.entryLayer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+
+.entryLayer > * {
+  pointer-events: auto;
 }
 
 /* Moving entry overlay */
@@ -40,9 +81,12 @@
   justify-content: center;
   border-right: 1px solid rgba(0, 0, 0, 0.1);
   border-bottom: 2px solid var(--accent-700);
+  /* Sticky: stick just below the toolbar (46px toolbar height) */
   position: sticky;
+  top: 46px;
   left: 0;
-  z-index: 3;
+  z-index: 10;
+  /* Above day headers */
   text-transform: uppercase;
   letter-spacing: 0.8px;
 }
@@ -58,6 +102,10 @@
   border-bottom: 2px solid var(--accent-700);
   cursor: pointer;
   transition: var(--transition-fast);
+  /* Sticky: same top offset as header label */
+  position: sticky;
+  top: 46px;
+  z-index: 5;
 }
 
 .headerDay:hover {

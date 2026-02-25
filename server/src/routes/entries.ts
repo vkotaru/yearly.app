@@ -31,15 +31,23 @@ router.get('/:year', (req, res) => {
 // POST /api/entries — auto-set user_id
 router.post('/', (req, res) => {
   const body: CreateEntryDto = req.body;
-  const { year, month, day_start, day_end, row_index, title, description, url, color, category, emoji, departure_time, arrival_time, is_private, is_tentative } = body;
+  const { year, month, end_month, day_start, day_end, row_index, title, description, url, color, category, emoji, departure_time, arrival_time, is_private, is_tentative } = body;
 
   if (!year || !month || !day_start || !day_end || row_index == null) {
     res.status(400).json({ error: 'Missing required fields: year, month, day_start, day_end, row_index' });
     return;
   }
 
-  if (day_end < day_start) {
-    res.status(400).json({ error: 'day_end must be >= day_start' });
+  // Validate end_month (for cross-month entries)
+  const finalEndMonth = end_month ?? month;
+  if (finalEndMonth < month) {
+    res.status(400).json({ error: 'end_month must be >= month' });
+    return;
+  }
+
+  // For same-month entries, validate day_end >= day_start
+  if (finalEndMonth === month && day_end < day_start) {
+    res.status(400).json({ error: 'day_end must be >= day_start for same-month entries' });
     return;
   }
 
@@ -48,10 +56,10 @@ router.post('/', (req, res) => {
   const isTentative = is_tentative ? 1 : 0;
 
   const result = db.prepare(`
-    INSERT INTO entries (year, month, day_start, day_end, row_index, title, description, url, color, category, emoji, departure_time, arrival_time, user_id, is_private, is_tentative)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO entries (year, month, end_month, day_start, day_end, row_index, title, description, url, color, category, emoji, departure_time, arrival_time, user_id, is_private, is_tentative)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
-    year, month, day_start, day_end, row_index,
+    year, month, finalEndMonth, day_start, day_end, row_index,
     title ?? '', description ?? '', url ?? '', color ?? '#3b82f6', category ?? '',
     emoji ?? '', departure_time ?? '', arrival_time ?? '',
     userId, isPrivate, isTentative
@@ -85,6 +93,8 @@ router.put('/:id', (req, res) => {
   const updates: string[] = [];
   const values: unknown[] = [];
 
+  if (body.month != null) { updates.push('month = ?'); values.push(body.month); }
+  if (body.end_month != null) { updates.push('end_month = ?'); values.push(body.end_month); }
   if (body.day_start != null) { updates.push('day_start = ?'); values.push(body.day_start); }
   if (body.day_end != null) { updates.push('day_end = ?'); values.push(body.day_end); }
   if (body.row_index != null) { updates.push('row_index = ?'); values.push(body.row_index); }

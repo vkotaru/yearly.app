@@ -180,6 +180,7 @@ export default function EntryEditor({
     const start = Math.min(dStart, dEnd);
     const end = Math.max(dStart, dEnd);
     if (existingEntry) {
+      // Update existing entry
       onSave({
         id: existingEntry.id,
         title,
@@ -192,37 +193,32 @@ export default function EntryEditor({
         color,
         day_start: start,
         day_end: end,
+        end_month: isCrossMonth && endMonth ? endMonth : existingEntry.end_month,
         is_private: isPrivate,
         is_tentative: isTentative,
       });
     } else if (isCrossMonth && endMonth) {
-      // Create entries for each month in the range
-      const dtos: CreateEntryDto[] = [];
-      for (let m = month; m <= endMonth; m++) {
-        const mDays = getDaysInMonth(year, m);
-        const mStart = m === month ? dayStart : 1;
-        const mEnd = m === endMonth ? dayEnd : mDays;
-
-        dtos.push({
-          year,
-          month: m,
-          day_start: mStart,
-          day_end: mEnd,
-          row_index: rowIndex,
-          title,
-          description,
-          url,
-          category,
-          emoji,
-          departure_time: departureTime,
-          arrival_time: arrivalTime,
-          color,
-          is_private: isPrivate,
-          is_tentative: isTentative,
-        });
-      }
-      onSave(dtos);
+      // Create single entry with end_month for cross-month selection
+      onSave({
+        year,
+        month,
+        end_month: endMonth,
+        day_start: dayStart,
+        day_end: dayEnd,
+        row_index: rowIndex,
+        title,
+        description,
+        url,
+        category,
+        emoji,
+        departure_time: departureTime,
+        arrival_time: arrivalTime,
+        color,
+        is_private: isPrivate,
+        is_tentative: isTentative,
+      });
     } else {
+      // Create single-month entry
       onSave({
         year,
         month,

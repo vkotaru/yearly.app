@@ -11,9 +11,10 @@ export interface User {
 export interface Entry {
   id: number;
   year: number;
-  month: number;       // 1-12
-  day_start: number;   // 1-31
-  day_end: number;     // 1-31
+  month: number;       // 1-12 (start month)
+  end_month: number;   // 1-12 (end month, same as month for single-month entries)
+  day_start: number;   // 1-31 (start day in start month)
+  day_end: number;     // 1-31 (end day in end month)
   row_index: number;   // 0-based slot
   title: string;
   description: string;
@@ -44,6 +45,7 @@ export interface Comment {
 export interface CreateEntryDto {
   year: number;
   month: number;
+  end_month?: number;  // Optional, defaults to month for single-month entries
   day_start: number;
   day_end: number;
   row_index: number;
@@ -60,6 +62,8 @@ export interface CreateEntryDto {
 }
 
 export interface UpdateEntryDto {
+  month?: number;      // Allow changing start month when moving
+  end_month?: number;  // Allow changing end month
   day_start?: number;
   day_end?: number;
   row_index?: number;
