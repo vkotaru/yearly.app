@@ -2,9 +2,9 @@ import type { Entry } from '../../../shared/types';
 import { getDaysInMonth } from './calendar';
 
 // Grid dimension constants (centralized for consistency)
-// Note: ROW_HEIGHT is the default; actual value comes from settings.gridCellSize
+// Note: ROW_HEIGHT and DAY_WIDTH are defaults; actual values come from settings
 export const GRID = {
-  DAY_WIDTH: 40,
+  DEFAULT_DAY_WIDTH: 40,
   DEFAULT_ROW_HEIGHT: 24,
   MONTH_LABEL_WIDTH: 72,
   HEADER_HEIGHT: 32,
@@ -56,7 +56,8 @@ export function calculateEntryPosition(
   entry: Entry,
   monthOffsets: MonthRowInfo[],
   year: number,
-  rowHeight: number = GRID.DEFAULT_ROW_HEIGHT
+  rowHeight: number = GRID.DEFAULT_ROW_HEIGHT,
+  dayWidth: number = GRID.DEFAULT_DAY_WIDTH
 ): EntryPosition {
   const monthInfo = monthOffsets.find(m => m.month === entry.month);
   if (!monthInfo) throw new Error(`Month ${entry.month} not found`);
@@ -66,8 +67,8 @@ export function calculateEntryPosition(
   const span = clampedDayEnd - entry.day_start + 1;
 
   const top = monthInfo.yOffset + (entry.row_index * rowHeight) + GRID.ENTRY_MARGIN;
-  const left = GRID.MONTH_LABEL_WIDTH + ((entry.day_start - 1) * GRID.DAY_WIDTH) + GRID.ENTRY_MARGIN;
-  const width = (span * GRID.DAY_WIDTH) - (2 * GRID.ENTRY_MARGIN);
+  const left = GRID.MONTH_LABEL_WIDTH + ((entry.day_start - 1) * dayWidth) + GRID.ENTRY_MARGIN;
+  const width = (span * dayWidth) - (2 * GRID.ENTRY_MARGIN);
   const height = rowHeight - (2 * GRID.ENTRY_MARGIN);
 
   return { top, left, width, height };
@@ -92,7 +93,8 @@ export function calculateCrossMonthSegments(
   entry: Entry,
   year: number,
   monthOffsets: MonthRowInfo[],
-  rowHeight: number = GRID.DEFAULT_ROW_HEIGHT
+  rowHeight: number = GRID.DEFAULT_ROW_HEIGHT,
+  dayWidth: number = GRID.DEFAULT_DAY_WIDTH
 ): CrossMonthSegment[] {
   const startMonth = entry.month;
   const endMonth = entry.end_month ?? entry.month;
@@ -113,8 +115,8 @@ export function calculateCrossMonthSegments(
     const span = Math.max(1, dayEnd - dayStart + 1);
 
     const top = monthInfo.yOffset + (entry.row_index * rowHeight) + GRID.ENTRY_MARGIN;
-    const left = GRID.MONTH_LABEL_WIDTH + ((dayStart - 1) * GRID.DAY_WIDTH) + GRID.ENTRY_MARGIN;
-    const width = (span * GRID.DAY_WIDTH) - (2 * GRID.ENTRY_MARGIN);
+    const left = GRID.MONTH_LABEL_WIDTH + ((dayStart - 1) * dayWidth) + GRID.ENTRY_MARGIN;
+    const width = (span * dayWidth) - (2 * GRID.ENTRY_MARGIN);
     const height = rowHeight - (2 * GRID.ENTRY_MARGIN);
 
     segments.push({
@@ -145,14 +147,15 @@ export function pixelToGridCoords(
   clientY: number,
   gridRect: DOMRect,
   monthOffsets: MonthRowInfo[],
-  rowHeight: number = GRID.DEFAULT_ROW_HEIGHT
+  rowHeight: number = GRID.DEFAULT_ROW_HEIGHT,
+  dayWidth: number = GRID.DEFAULT_DAY_WIDTH
 ): GridCoords | null {
   const xInGrid = clientX - gridRect.left - GRID.MONTH_LABEL_WIDTH;
   const yInGrid = clientY - gridRect.top;
 
   if (xInGrid < 0 || yInGrid < 0) return null;
 
-  const day = Math.floor(xInGrid / GRID.DAY_WIDTH) + 1;
+  const day = Math.floor(xInGrid / dayWidth) + 1;
   if (day < 1 || day > 31) return null;
 
   // Find month by Y position

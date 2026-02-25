@@ -39,7 +39,7 @@
 /* ── The CSS Grid ── */
 .grid {
   display: grid;
-  grid-template-columns: 72px repeat(31, 40px);
+  grid-template-columns: 72px repeat(31, var(--grid-day-width, 40px));
   width: fit-content;
   /* Remove overflow:hidden so sticky headers work; use box-shadow for appearance */
   border: 1px solid var(--border-default);

@@ -66,7 +66,7 @@ export default function YearGrid({ year }: Props) {
   const gridRef = useRef<HTMLDivElement>(null);
 
   const { recordAction, registerExecutors } = useHistory();
-  const { settings } = useSettings();
+  const { settings, dayWidth } = useSettings();
   const rowHeight = settings.gridCellSize;
 
   const loadEntries = useCallback(async () => {
@@ -393,7 +393,7 @@ export default function YearGrid({ year }: Props) {
       const xInGrid = e.clientX - gridRect.left - GRID.MONTH_LABEL_WIDTH;
       if (xInGrid < 0) return;
 
-      const day = Math.floor(xInGrid / GRID.DAY_WIDTH) + 1;
+      const day = Math.floor(xInGrid / dayWidth) + 1;
       const currentMonth = resize.entry.month;
       const maxDay = getDaysInMonth(year, currentMonth);
 
@@ -429,7 +429,7 @@ export default function YearGrid({ year }: Props) {
         const entry = moveIntent.current.entry;
         const gridRect = gridRef.current.getBoundingClientRect();
         const xInGrid = moveIntent.current.startX - gridRect.left - GRID.MONTH_LABEL_WIDTH;
-        const grabDay = Math.max(1, Math.floor(xInGrid / GRID.DAY_WIDTH) + 1);
+        const grabDay = Math.max(1, Math.floor(xInGrid / dayWidth) + 1);
         const grabOffset = grabDay - entry.day_start;
 
         // Calculate total span in days (including cross-month)
@@ -477,7 +477,7 @@ export default function YearGrid({ year }: Props) {
 
       // Horizontal position (day)
       const xInGrid = e.clientX - gridRect.left - GRID.MONTH_LABEL_WIDTH;
-      const dayAtMouse = Math.floor(xInGrid / GRID.DAY_WIDTH) + 1;
+      const dayAtMouse = Math.floor(xInGrid / dayWidth) + 1;
       let newDayStart = dayAtMouse - move.grabOffset;
 
       // Vertical position (find month and row)
@@ -693,6 +693,7 @@ export default function YearGrid({ year }: Props) {
                   year={year}
                   monthOffsets={monthOffsets}
                   rowHeight={rowHeight}
+                  dayWidth={dayWidth}
                   isDimmed={filteredEntryIds !== null && !filteredEntryIds.has(entry.id)}
                   isBeingMoved={entry.id === move?.entry.id}
                   isResizing={entry.id === resize?.entry.id}
@@ -717,7 +718,7 @@ export default function YearGrid({ year }: Props) {
               if (!monthInfo) return null;
 
               const topOffset = monthInfo.yOffset + currentRowIndex * rowHeight;
-              const leftOffset = GRID.MONTH_LABEL_WIDTH + (currentDayStart - 1) * GRID.DAY_WIDTH;
+              const leftOffset = GRID.MONTH_LABEL_WIDTH + (currentDayStart - 1) * dayWidth;
 
               return (
                 <div
@@ -726,7 +727,7 @@ export default function YearGrid({ year }: Props) {
                     position: 'absolute',
                     top: `${topOffset}px`,
                     left: `${leftOffset}px`,
-                    width: `${span * GRID.DAY_WIDTH - 2}px`,
+                    width: `${span * dayWidth - 2}px`,
                     height: `${rowHeight - 2}px`,
                     backgroundColor: entry.color,
                     borderRadius: '4px',

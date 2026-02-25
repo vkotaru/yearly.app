@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo, type ReactNode } from 'react';
 
 export interface Settings
 {
@@ -6,6 +6,23 @@ export interface Settings
   fontSize: number;      // base size in px (grid text scales from this)
   gridCellSize: number;  // cell height in px
   calendarWidth: number; // max content width in px (0 = fluid)
+}
+
+// Grid constants
+const MONTH_LABEL_WIDTH = 72;
+const DEFAULT_DAY_WIDTH = 40;
+const MIN_DAY_WIDTH = 28;
+
+/**
+ * Calculate day column width based on calendar width setting.
+ * If calendarWidth is 0 (fluid), use default width.
+ * Otherwise, compute to fit exactly within the specified width.
+ */
+export function computeDayWidth(calendarWidth: number): number {
+  if (calendarWidth <= 0) return DEFAULT_DAY_WIDTH;
+  const available = calendarWidth - MONTH_LABEL_WIDTH;
+  const computed = Math.floor(available / 31);
+  return Math.max(MIN_DAY_WIDTH, computed);
 }
 
 const FONT_OPTIONS = [
@@ -46,17 +63,25 @@ function loadSettings(): Settings
 interface SettingsContextValue
 {
   settings: Settings;
+  dayWidth: number;  // computed from calendarWidth
   updateSettings: (patch: Partial<Settings>) => void;
 }
 
 const SettingsContext = createContext<SettingsContextValue>({
   settings: DEFAULT_SETTINGS,
+  dayWidth: DEFAULT_DAY_WIDTH,
   updateSettings: () => { },
 });
 
 export function SettingsProvider({ children }: { children: ReactNode })
 {
   const [settings, setSettings] = useState<Settings>(loadSettings);
+
+  // Compute day width from calendar width setting
+  const dayWidth = useMemo(
+    () => computeDayWidth(settings.calendarWidth),
+    [settings.calendarWidth]
+  );
 
   useEffect(() =>
   {
@@ -66,11 +91,12 @@ export function SettingsProvider({ children }: { children: ReactNode })
     root.style.setProperty('--font-family', settings.fontFamily);
     root.style.setProperty('--font-size', `${settings.fontSize}px`);
     root.style.setProperty('--grid-cell-height', `${settings.gridCellSize}px`);
+    root.style.setProperty('--grid-day-width', `${dayWidth}px`);
     root.style.setProperty(
       '--calendar-max-width',
       settings.calendarWidth > 0 ? `${settings.calendarWidth}px` : 'none'
     );
-  }, [settings]);
+  }, [settings, dayWidth]);
 
   function updateSettings(patch: Partial<Settings>)
   {
@@ -78,7 +104,7 @@ export function SettingsProvider({ children }: { children: ReactNode })
   }
 
   return (
-    <SettingsContext.Provider value={{ settings, updateSettings }}>
+    <SettingsContext.Provider value={{ settings, dayWidth, updateSettings }}>
       {children}
     </SettingsContext.Provider>
   );
