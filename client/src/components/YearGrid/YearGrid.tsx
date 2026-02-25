@@ -3,6 +3,7 @@ import type { Entry, CreateEntryDto, UpdateEntryDto } from '../../../../shared/t
 import { fetchEntries, createEntry, updateEntry, deleteEntry } from '../../api/entries';
 import { getDaysInMonth } from '../../utils/calendar';
 import { useHistory } from '../../contexts/HistoryContext';
+import { useSettings } from '../../contexts/SettingsContext';
 import type { HistoryAction } from '../../types/history';
 import {
   calculateMonthOffsets,
@@ -65,6 +66,8 @@ export default function YearGrid({ year }: Props) {
   const gridRef = useRef<HTMLDivElement>(null);
 
   const { recordAction, registerExecutors } = useHistory();
+  const { settings } = useSettings();
+  const rowHeight = settings.gridCellSize;
 
   const loadEntries = useCallback(async () => {
     const data = await fetchEntries(year);
@@ -205,8 +208,8 @@ export default function YearGrid({ year }: Props) {
 
   // Calculate month offsets for absolute positioning
   const monthOffsets = useMemo(() => {
-    return calculateMonthOffsets(monthRows, entriesByMonth);
-  }, [monthRows, entriesByMonth]);
+    return calculateMonthOffsets(monthRows, entriesByMonth, rowHeight);
+  }, [monthRows, entriesByMonth, rowHeight]);
 
   // Calculate row counts per month
   const monthRowCounts = useMemo(() => {
@@ -488,12 +491,12 @@ export default function YearGrid({ year }: Props) {
         const current = monthOffsets[i];
         const nextYOffset = i < monthOffsets.length - 1
           ? monthOffsets[i + 1].yOffset
-          : current.yOffset + current.rowCount * GRID.ROW_HEIGHT;
+          : current.yOffset + current.rowCount * rowHeight;
 
         if (yInGrid >= current.yOffset && yInGrid < nextYOffset) {
           targetMonth = current.month;
           const yInMonth = yInGrid - current.yOffset;
-          targetRowIndex = Math.max(0, Math.floor(yInMonth / GRID.ROW_HEIGHT));
+          targetRowIndex = Math.max(0, Math.floor(yInMonth / rowHeight));
           break;
         }
       }
@@ -689,6 +692,7 @@ export default function YearGrid({ year }: Props) {
                   entry={entry}
                   year={year}
                   monthOffsets={monthOffsets}
+                  rowHeight={rowHeight}
                   isDimmed={filteredEntryIds !== null && !filteredEntryIds.has(entry.id)}
                   isBeingMoved={entry.id === move?.entry.id}
                   isResizing={entry.id === resize?.entry.id}
@@ -712,7 +716,7 @@ export default function YearGrid({ year }: Props) {
               const monthInfo = monthOffsets.find(m => m.month === currentMonth);
               if (!monthInfo) return null;
 
-              const topOffset = monthInfo.yOffset + currentRowIndex * GRID.ROW_HEIGHT;
+              const topOffset = monthInfo.yOffset + currentRowIndex * rowHeight;
               const leftOffset = GRID.MONTH_LABEL_WIDTH + (currentDayStart - 1) * GRID.DAY_WIDTH;
 
               return (
@@ -723,7 +727,7 @@ export default function YearGrid({ year }: Props) {
                     top: `${topOffset}px`,
                     left: `${leftOffset}px`,
                     width: `${span * GRID.DAY_WIDTH - 2}px`,
-                    height: `${GRID.ROW_HEIGHT - 2}px`,
+                    height: `${rowHeight - 2}px`,
                     backgroundColor: entry.color,
                     borderRadius: '4px',
                     display: 'flex',

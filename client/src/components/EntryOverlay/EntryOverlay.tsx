@@ -11,6 +11,7 @@ interface Props {
   entry: Entry;
   year: number;
   monthOffsets: MonthRowInfo[];
+  rowHeight: number;
   isDimmed: boolean;
   isBeingMoved: boolean;
   isResizing: boolean;
@@ -21,7 +22,7 @@ interface Props {
 }
 
 export default function EntryOverlay({
-  entry, year, monthOffsets, isDimmed, isBeingMoved, isResizing,
+  entry, year, monthOffsets, rowHeight, isDimmed, isBeingMoved, isResizing,
   resizeDayEnd, resizeEndMonth,
   onMouseDown, onResizeStart,
 }: Props) {
@@ -36,8 +37,8 @@ export default function EntryOverlay({
   }, [entry, isResizing, resizeDayEnd, resizeEndMonth]);
 
   const segments = useMemo(
-    () => calculateCrossMonthSegments(adjustedEntry, year, monthOffsets),
-    [adjustedEntry, year, monthOffsets]
+    () => calculateCrossMonthSegments(adjustedEntry, year, monthOffsets, rowHeight),
+    [adjustedEntry, year, monthOffsets, rowHeight]
   );
 
   const isPast = useMemo(() => {

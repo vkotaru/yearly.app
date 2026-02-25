@@ -2,9 +2,10 @@ import type { Entry } from '../../../shared/types';
 import { getDaysInMonth } from './calendar';
 
 // Grid dimension constants (centralized for consistency)
+// Note: ROW_HEIGHT is the default; actual value comes from settings.gridCellSize
 export const GRID = {
   DAY_WIDTH: 40,
-  ROW_HEIGHT: 24,
+  DEFAULT_ROW_HEIGHT: 24,
   MONTH_LABEL_WIDTH: 72,
   HEADER_HEIGHT: 32,
   ENTRY_MARGIN: 1,
@@ -22,7 +23,8 @@ export interface MonthRowInfo {
  */
 export function calculateMonthOffsets(
   monthRows: Record<number, number>,
-  entriesByMonth: Record<number, Entry[]>
+  entriesByMonth: Record<number, Entry[]>,
+  rowHeight: number = GRID.DEFAULT_ROW_HEIGHT
 ): MonthRowInfo[] {
   const result: MonthRowInfo[] = [];
   let yOffset = GRID.HEADER_HEIGHT;
@@ -34,7 +36,7 @@ export function calculateMonthOffsets(
     const rowCount = maxRowIndex + 1;
 
     result.push({ month: m, rowCount, yOffset });
-    yOffset += rowCount * GRID.ROW_HEIGHT;
+    yOffset += rowCount * rowHeight;
   }
 
   return result;
@@ -53,7 +55,8 @@ export interface EntryPosition {
 export function calculateEntryPosition(
   entry: Entry,
   monthOffsets: MonthRowInfo[],
-  year: number
+  year: number,
+  rowHeight: number = GRID.DEFAULT_ROW_HEIGHT
 ): EntryPosition {
   const monthInfo = monthOffsets.find(m => m.month === entry.month);
   if (!monthInfo) throw new Error(`Month ${entry.month} not found`);
@@ -62,10 +65,10 @@ export function calculateEntryPosition(
   const clampedDayEnd = Math.min(entry.day_end, daysInMonth);
   const span = clampedDayEnd - entry.day_start + 1;
 
-  const top = monthInfo.yOffset + (entry.row_index * GRID.ROW_HEIGHT) + GRID.ENTRY_MARGIN;
+  const top = monthInfo.yOffset + (entry.row_index * rowHeight) + GRID.ENTRY_MARGIN;
   const left = GRID.MONTH_LABEL_WIDTH + ((entry.day_start - 1) * GRID.DAY_WIDTH) + GRID.ENTRY_MARGIN;
   const width = (span * GRID.DAY_WIDTH) - (2 * GRID.ENTRY_MARGIN);
-  const height = GRID.ROW_HEIGHT - (2 * GRID.ENTRY_MARGIN);
+  const height = rowHeight - (2 * GRID.ENTRY_MARGIN);
 
   return { top, left, width, height };
 }
@@ -88,7 +91,8 @@ export interface CrossMonthSegment extends EntryPosition {
 export function calculateCrossMonthSegments(
   entry: Entry,
   year: number,
-  monthOffsets: MonthRowInfo[]
+  monthOffsets: MonthRowInfo[],
+  rowHeight: number = GRID.DEFAULT_ROW_HEIGHT
 ): CrossMonthSegment[] {
   const startMonth = entry.month;
   const endMonth = entry.end_month ?? entry.month;
@@ -108,10 +112,10 @@ export function calculateCrossMonthSegments(
     const dayEnd = isEnd ? Math.min(entry.day_end, daysInMonth) : daysInMonth;
     const span = Math.max(1, dayEnd - dayStart + 1);
 
-    const top = monthInfo.yOffset + (entry.row_index * GRID.ROW_HEIGHT) + GRID.ENTRY_MARGIN;
+    const top = monthInfo.yOffset + (entry.row_index * rowHeight) + GRID.ENTRY_MARGIN;
     const left = GRID.MONTH_LABEL_WIDTH + ((dayStart - 1) * GRID.DAY_WIDTH) + GRID.ENTRY_MARGIN;
     const width = (span * GRID.DAY_WIDTH) - (2 * GRID.ENTRY_MARGIN);
-    const height = GRID.ROW_HEIGHT - (2 * GRID.ENTRY_MARGIN);
+    const height = rowHeight - (2 * GRID.ENTRY_MARGIN);
 
     segments.push({
       top, left, width, height,
@@ -140,7 +144,8 @@ export function pixelToGridCoords(
   clientX: number,
   clientY: number,
   gridRect: DOMRect,
-  monthOffsets: MonthRowInfo[]
+  monthOffsets: MonthRowInfo[],
+  rowHeight: number = GRID.DEFAULT_ROW_HEIGHT
 ): GridCoords | null {
   const xInGrid = clientX - gridRect.left - GRID.MONTH_LABEL_WIDTH;
   const yInGrid = clientY - gridRect.top;
@@ -155,11 +160,11 @@ export function pixelToGridCoords(
     const current = monthOffsets[i];
     const nextYOffset = i < monthOffsets.length - 1
       ? monthOffsets[i + 1].yOffset
-      : current.yOffset + current.rowCount * GRID.ROW_HEIGHT;
+      : current.yOffset + current.rowCount * rowHeight;
 
     if (yInGrid >= current.yOffset && yInGrid < nextYOffset) {
       const yInMonth = yInGrid - current.yOffset;
-      const rowIndex = Math.max(0, Math.floor(yInMonth / GRID.ROW_HEIGHT));
+      const rowIndex = Math.max(0, Math.floor(yInMonth / rowHeight));
       return { month: current.month, day, rowIndex };
     }
   }
@@ -170,10 +175,13 @@ export function pixelToGridCoords(
 /**
  * Calculate the total height of the grid (for container sizing).
  */
-export function calculateGridHeight(monthOffsets: MonthRowInfo[]): number {
+export function calculateGridHeight(
+  monthOffsets: MonthRowInfo[],
+  rowHeight: number = GRID.DEFAULT_ROW_HEIGHT
+): number {
   if (monthOffsets.length === 0) return GRID.HEADER_HEIGHT;
   const lastMonth = monthOffsets[monthOffsets.length - 1];
-  return lastMonth.yOffset + (lastMonth.rowCount * GRID.ROW_HEIGHT);
+  return lastMonth.yOffset + (lastMonth.rowCount * rowHeight);
 }
 
 /**
