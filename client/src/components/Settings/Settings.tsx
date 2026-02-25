@@ -2,24 +2,31 @@ import { useEffect, useRef } from 'react';
 import { useSettings, FONT_OPTIONS } from '../../contexts/SettingsContext';
 import styles from './Settings.module.css';
 
-interface Props {
+interface Props
+{
   onClose: () => void;
 }
 
-export default function Settings({ onClose }: Props) {
+export default function Settings({ onClose }: Props)
+{
   const { settings, updateSettings } = useSettings();
   const panelRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+  useEffect(() =>
+  {
+    function handleClickOutside(e: MouseEvent)
+    {
+      if (panelRef.current && !panelRef.current.contains(e.target as Node))
+      {
         onClose();
       }
     }
-    const timer = setTimeout(() => {
+    const timer = setTimeout(() =>
+    {
       document.addEventListener('mousedown', handleClickOutside);
     }, 50);
-    return () => {
+    return () =>
+    {
       clearTimeout(timer);
       document.removeEventListener('mousedown', handleClickOutside);
     };
@@ -84,6 +91,31 @@ export default function Settings({ onClose }: Props) {
           <div className={styles.sliderLabels}>
             <span>Compact</span>
             <span>Spacious</span>
+          </div>
+        </div>
+
+        <div className={styles.section}>
+          <label className={styles.label}>
+            Calendar Width{' '}
+            <span className={styles.value}>
+              {settings.calendarWidth === 0 ? 'Full Width' : `${settings.calendarWidth}px`}
+            </span>
+          </label>
+          <input
+            type="range"
+            min={0}
+            max={1600}
+            step={50}
+            value={settings.calendarWidth}
+            onChange={(e) => updateSettings({ calendarWidth: Number(e.target.value) })}
+            className={styles.slider}
+          />
+          <div className={styles.sliderLabels}>
+            <span>Full Width</span>
+            <span>1600px</span>
+          </div>
+          <div className={styles.widthHint}>
+            Set to 0 (left) for full-width fluid layout.
           </div>
         </div>
 

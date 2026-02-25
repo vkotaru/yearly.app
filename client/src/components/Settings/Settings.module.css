@@ -163,6 +163,13 @@
   letter-spacing: 0.3px;
 }
 
+.widthHint {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
 /* ── Preview ── */
 .preview {
   padding: 16px;

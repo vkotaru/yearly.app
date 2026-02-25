@@ -1,9 +1,11 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 
-export interface Settings {
+export interface Settings
+{
   fontFamily: string;
-  fontSize: number;     // base size in px (grid text scales from this)
-  gridCellSize: number; // cell height in px
+  fontSize: number;      // base size in px (grid text scales from this)
+  gridCellSize: number;  // cell height in px
+  calendarWidth: number; // max content width in px (0 = fluid)
 }
 
 const FONT_OPTIONS = [
@@ -26,41 +28,52 @@ const DEFAULT_SETTINGS: Settings = {
   fontFamily: "'Geist', sans-serif",
   fontSize: 13,
   gridCellSize: 24,
+  calendarWidth: 0, // 0 = fluid
 };
 
 const STORAGE_KEY = 'yearly-planner-settings';
 
-function loadSettings(): Settings {
-  try {
+function loadSettings(): Settings
+{
+  try
+  {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) return { ...DEFAULT_SETTINGS, ...JSON.parse(stored) };
   } catch { /* ignore */ }
   return DEFAULT_SETTINGS;
 }
 
-interface SettingsContextValue {
+interface SettingsContextValue
+{
   settings: Settings;
   updateSettings: (patch: Partial<Settings>) => void;
 }
 
 const SettingsContext = createContext<SettingsContextValue>({
   settings: DEFAULT_SETTINGS,
-  updateSettings: () => {},
+  updateSettings: () => { },
 });
 
-export function SettingsProvider({ children }: { children: ReactNode }) {
+export function SettingsProvider({ children }: { children: ReactNode })
+{
   const [settings, setSettings] = useState<Settings>(loadSettings);
 
-  useEffect(() => {
+  useEffect(() =>
+  {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
     // Apply as CSS variables on :root
     const root = document.documentElement;
     root.style.setProperty('--font-family', settings.fontFamily);
     root.style.setProperty('--font-size', `${settings.fontSize}px`);
     root.style.setProperty('--grid-cell-height', `${settings.gridCellSize}px`);
+    root.style.setProperty(
+      '--calendar-max-width',
+      settings.calendarWidth > 0 ? `${settings.calendarWidth}px` : 'none'
+    );
   }, [settings]);
 
-  function updateSettings(patch: Partial<Settings>) {
+  function updateSettings(patch: Partial<Settings>)
+  {
     setSettings((prev) => ({ ...prev, ...patch }));
   }
 
@@ -71,6 +84,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useSettings() {
+export function useSettings()
+{
   return useContext(SettingsContext);
 }
