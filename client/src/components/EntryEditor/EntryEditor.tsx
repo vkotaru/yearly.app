@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import type { Entry, Comment, Todo, CreateEntryDto, UpdateEntryDto } from '../../../../shared/types';
 import { fetchComments, createComment, deleteComment, fetchTodos, createTodo, updateTodo, deleteTodo } from '../../api/entries';
 import { getDaysInMonth, getMonthName } from '../../utils/calendar';
@@ -282,7 +283,8 @@ export default function EntryEditor({
       ? `${getMonthName(month)} ${dStart}`
       : `${getMonthName(month)} ${dStart} – ${dEnd}`;
 
-  return (
+  // Render modal at document.body level via portal to avoid overflow:hidden issues
+  return createPortal(
     <div className={styles.overlay}>
       <div className={styles.editor} ref={dialogRef} onKeyDown={handleKeyDown}>
         <div className={styles.titleRow}>
@@ -579,6 +581,7 @@ export default function EntryEditor({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

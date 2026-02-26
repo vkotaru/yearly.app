@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import type { Entry, Todo } from '../../../../shared/types';
 import { fetchTodos, createTodo, updateTodo, deleteTodo } from '../../api/entries';
 import { getMonthName } from '../../utils/calendar';
@@ -40,22 +41,41 @@ export default function EntryDetailPanel({ entry, onClose, onEdit }: Props) {
     setTodos(prev => prev.filter(t => t.id !== todoId));
   }
 
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    }
+    const timer = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside);
+    }, 100);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [onClose]);
+
   const completedCount = todos.filter(t => t.completed).length;
   const dateLabel = entry.day_start === entry.day_end
     ? `${getMonthName(entry.month)} ${entry.day_start}`
     : `${getMonthName(entry.month)} ${entry.day_start} – ${entry.day_end}`;
 
-  return (
-    <div className={styles.panel}>
-      <div className={styles.header}>
-        <button className={styles.closeBtn} onClick={onClose} title="Close">
-          &times;
-        </button>
-        <div
-          className={styles.colorBar}
-          style={{ backgroundColor: entry.color }}
-        />
-        <div className={styles.titleSection}>
+  // Render at document.body level via portal to avoid overflow:hidden issues
+  return createPortal(
+    <div className={styles.overlay}>
+      <div className={styles.panel} ref={panelRef}>
+        <div className={styles.header}>
+          <button className={styles.closeBtn} onClick={onClose} title="Close">
+            &times;
+          </button>
+          <div
+            className={styles.colorBar}
+            style={{ backgroundColor: entry.color }}
+          />
+          <div className={styles.titleSection}>
           <h3 className={styles.title}>
             {entry.emoji && <span className={styles.emoji}>{entry.emoji}</span>}
             {entry.title || 'Untitled'}
@@ -146,6 +166,8 @@ export default function EntryDetailPanel({ entry, onClose, onEdit }: Props) {
           </>
         )}
       </div>
-    </div>
+      </div>
+    </div>,
+    document.body
   );
 }
