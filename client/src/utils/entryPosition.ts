@@ -7,7 +7,7 @@ export const GRID = {
   DEFAULT_DAY_WIDTH: 40,
   DEFAULT_ROW_HEIGHT: 24,
   MONTH_LABEL_WIDTH: 72,
-  HEADER_HEIGHT: 32,
+  HEADER_HEIGHT: 0,  // Day header is now in sticky header, outside the grid
   ENTRY_MARGIN: 1,
 } as const;
 
