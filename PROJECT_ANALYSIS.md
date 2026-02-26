@@ -188,15 +188,19 @@ User preferences are stored in `localStorage` and applied as CSS custom property
 
 ### 3.1 Critical / Data-Safety
 
-#### F1 — `YEAR` hard-coded in `App.tsx`
+#### ~~F1 — `YEAR` hard-coded in `App.tsx`~~ ✅ FIXED
 ```typescript
+// OLD CODE - now fixed
 const YEAR = 2026;  // line 13
 ```
-The year is a compile-time constant. Viewing past or future years requires a code change and redeploy. This is a significant limitation for any user wanting historical data or planning ahead.
+~~The year is a compile-time constant. Viewing past or future years requires a code change and redeploy.~~
 
-#### F2 — Undo on "delete" uses fuzzy matching
-When redoing a delete, the code finds the target entry by matching on `(month, day_start, day_end, title)`:
+**Fix:** Year is now a React state variable with navigation arrows and a "Today" button. Users can navigate between years freely.
+
+#### ~~F2 — Undo on "delete" uses fuzzy matching~~ ✅ FIXED
+~~When redoing a delete, the code finds the target entry by matching on `(month, day_start, day_end, title)`:~~
 ```typescript
+// OLD CODE - now fixed
 const match = currentEntries.find(e =>
   e.month === deletedEntry.month &&
   e.day_start === deletedEntry.day_start &&
@@ -204,7 +208,9 @@ const match = currentEntries.find(e =>
   e.title === deletedEntry.title
 );
 ```
-This fuzzy match can silently delete the wrong entry if two entries share the same start/end/title. The correct fix is to track the recreated entry's new ID after undo-of-delete and use that for redo-of-delete.
+~~This fuzzy match can silently delete the wrong entry if two entries share the same start/end/title.~~
+
+**Fix:** When undoing a delete, the recreated entry's new ID is captured and stored back in the action. Redo now uses the exact ID instead of fuzzy matching.
 
 #### ~~F3 — No input validation on `category` and `url` fields~~ ✅ FIXED
 ~~Category is free-text with no normalization (case, trimming). URL has no validation — any string is accepted and rendered as an `<a href>`. A malicious user could inject `javascript:` URLs.~~
@@ -218,8 +224,10 @@ Entries store their `row_index` in the database. When an entry is dragged to a f
 
 ### 3.2 UX / Product
 
-#### F5 — No year navigation
-Users cannot navigate between years from the UI (see F1). The app is effectively a "one year at a time" tool, which severely limits its usefulness as a multi-year planner.
+#### ~~F5 — No year navigation~~ ✅ FIXED
+~~Users cannot navigate between years from the UI (see F1). The app is effectively a "one year at a time" tool.~~
+
+**Fix:** Added year navigation arrows and "Today" button in the header. Users can navigate freely between years.
 
 #### F6 — Category is free-text, not a managed taxonomy
 Every user types categories manually. Typos silently create new categories (`Travel` vs `travel` vs `Travels`). There is no autocomplete, no merge, no canonical list.
@@ -311,15 +319,10 @@ Settings live only in `localStorage`. If a user logs in from a different browser
 
 ### P0 — Must-Fix (data correctness / security)
 
-#### I1 — Year Navigation UI
-Add a year selector to the header (e.g., `‹ 2025  2026  2027 ›`). Make `YEAR` a state variable, reload entries from the API when it changes.
+#### ~~I1 — Year Navigation UI~~ ✅ IMPLEMENTED
+~~Add a year selector to the header (e.g., `‹ 2025  2026  2027 ›`). Make `YEAR` a state variable, reload entries from the API when it changes.~~
 
-```typescript
-// App.tsx
-const [year, setYear] = useState(new Date().getFullYear());
-```
-
-The `GET /api/entries/:year` endpoint already works for any year — the backend needs no changes.
+**Done:** Added year navigation with left/right arrows and "Today" button in `App.tsx`. Year is now a state variable, entries reload when year changes.
 
 #### ~~I2 — Fix `getTextColor` for rgba colors~~ ✅ IMPLEMENTED
 ```typescript
@@ -443,8 +446,8 @@ Compute the current date once in `YearGrid` and pass `todayYear`, `todayMonth`, 
 
 | ID | Category | Severity | Effort | Status |
 |----|----------|----------|--------|--------|
-| F1 / I1 | Hard-coded year | 🔴 High | Low | Open |
-| F2 / I4 | Undo delete fuzzy match | 🔴 High | Medium | Open |
+| ~~F1 / I1~~ | ~~Hard-coded year~~ | ~~🔴 High~~ | ~~Low~~ | ✅ Fixed |
+| ~~F2~~ | ~~Undo delete fuzzy match~~ | ~~🔴 High~~ | ~~Medium~~ | ✅ Fixed |
 | ~~F3 / I5~~ | ~~URL sanitization~~ | ~~🔴 High~~ | ~~Low~~ | ✅ Fixed |
 | ~~F8 / I2~~ | ~~rgba text color bug~~ | ~~🟠 Medium~~ | ~~Low~~ | ✅ Fixed |
 | ~~F11~~ | ~~Legacy entries editable~~ | ~~🔴 High~~ | ~~Low~~ | ✅ Fixed |

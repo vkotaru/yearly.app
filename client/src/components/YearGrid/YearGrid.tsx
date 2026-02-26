@@ -130,8 +130,11 @@ export default function YearGrid({ year }: Props) {
         });
         break;
       case 'delete':
-        for (const entry of action.entries) {
-          await createEntry({
+        // Recreate deleted entries and update their IDs in the action
+        // so that redo can delete them by ID (not fuzzy match)
+        for (let i = 0; i < action.entries.length; i++) {
+          const entry = action.entries[i];
+          const newEntry = await createEntry({
             year: entry.year,
             month: entry.month,
             end_month: entry.end_month,
@@ -149,6 +152,8 @@ export default function YearGrid({ year }: Props) {
             is_private: entry.is_private,
             is_tentative: entry.is_tentative,
           });
+          // Update the action entry with the new ID for redo
+          action.entries[i] = { ...entry, id: newEntry.id };
         }
         break;
     }
@@ -200,17 +205,9 @@ export default function YearGrid({ year }: Props) {
         });
         break;
       case 'delete':
-        const currentEntries = await fetchEntries(year);
-        for (const deletedEntry of action.entries) {
-          const match = currentEntries.find(e =>
-            e.month === deletedEntry.month &&
-            e.day_start === deletedEntry.day_start &&
-            e.day_end === deletedEntry.day_end &&
-            e.title === deletedEntry.title
-          );
-          if (match) {
-            await deleteEntry(match.id);
-          }
+        // Use the entry IDs directly (updated during undo with new IDs)
+        for (const entry of action.entries) {
+          await deleteEntry(entry.id);
         }
         break;
     }
