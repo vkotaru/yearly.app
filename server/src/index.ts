@@ -13,12 +13,16 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// CORS: allow localhost for dev, explicit FRONTEND_URL in production
+// CORS: allow localhost for dev, Railway domain and FRONTEND_URL in production
+const railwayDomain = process.env.RAILWAY_PUBLIC_DOMAIN;
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
   process.env.FRONTEND_URL,
+  railwayDomain ? `https://${railwayDomain}` : null,
 ].filter(Boolean) as string[];
+
+console.log('Allowed CORS origins:', allowedOrigins);
 
 app.use(cors({
   origin: (origin, callback) => {
@@ -28,6 +32,7 @@ app.use(cors({
     } else if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
+      console.log('CORS rejected origin:', origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
