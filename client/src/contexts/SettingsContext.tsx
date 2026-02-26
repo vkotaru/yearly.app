@@ -15,11 +15,11 @@ const MIN_DAY_WIDTH = 28;
 
 /**
  * Calculate day column width based on calendar width setting.
- * If calendarWidth is 0 (fluid), use default width.
+ * If calendarWidth is -1 (fluid), use default width (actual width computed by YearGrid).
  * Otherwise, compute to fit exactly within the specified width.
  */
 export function computeDayWidth(calendarWidth: number): number {
-  if (calendarWidth <= 0) return DEFAULT_DAY_WIDTH;
+  if (calendarWidth < 0) return DEFAULT_DAY_WIDTH;
   const available = calendarWidth - MONTH_LABEL_WIDTH;
   const computed = Math.floor(available / 31);
   return Math.max(MIN_DAY_WIDTH, computed);
@@ -45,7 +45,7 @@ const DEFAULT_SETTINGS: Settings = {
   fontFamily: "'Geist', sans-serif",
   fontSize: 13,
   gridCellSize: 24,
-  calendarWidth: 0, // 0 = fluid
+  calendarWidth: -1, // -1 = fluid/fill, positive = fixed px
 };
 
 const STORAGE_KEY = 'yearly-planner-settings';
@@ -55,7 +55,18 @@ function loadSettings(): Settings
   try
   {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) return { ...DEFAULT_SETTINGS, ...JSON.parse(stored) };
+    if (stored) {
+      const parsed = { ...DEFAULT_SETTINGS, ...JSON.parse(stored) };
+      // Migrate old calendarWidth: 0 (old fluid) to -1 (new fluid)
+      if (parsed.calendarWidth === 0) {
+        parsed.calendarWidth = -1;
+      }
+      // Clamp old values below 800 to 800
+      if (parsed.calendarWidth > 0 && parsed.calendarWidth < 800) {
+        parsed.calendarWidth = 800;
+      }
+      return parsed;
+    }
   } catch { /* ignore */ }
   return DEFAULT_SETTINGS;
 }
@@ -87,16 +98,16 @@ export function SettingsProvider({ children }: { children: ReactNode })
   {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
     // Apply as CSS variables on :root
+    // Note: --grid-day-width is set by YearGrid (handles both fixed and fluid modes)
     const root = document.documentElement;
     root.style.setProperty('--font-family', settings.fontFamily);
     root.style.setProperty('--font-size', `${settings.fontSize}px`);
     root.style.setProperty('--grid-cell-height', `${settings.gridCellSize}px`);
-    root.style.setProperty('--grid-day-width', `${dayWidth}px`);
     root.style.setProperty(
       '--calendar-max-width',
-      settings.calendarWidth > 0 ? `${settings.calendarWidth}px` : 'none'
+      settings.calendarWidth >= 0 ? `${settings.calendarWidth}px` : 'none'
     );
-  }, [settings, dayWidth]);
+  }, [settings]);
 
   function updateSettings(patch: Partial<Settings>)
   {

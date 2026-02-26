@@ -3,7 +3,7 @@ import type { Entry, CreateEntryDto, UpdateEntryDto } from '../../../../shared/t
 import { fetchEntries, createEntry, updateEntry, deleteEntry } from '../../api/entries';
 import { getDaysInMonth } from '../../utils/calendar';
 import { useHistory } from '../../contexts/HistoryContext';
-import { useSettings } from '../../contexts/SettingsContext';
+import { useSettings, computeDayWidth } from '../../contexts/SettingsContext';
 import type { HistoryAction } from '../../types/history';
 import {
   calculateMonthOffsets,
@@ -64,10 +64,38 @@ export default function YearGrid({ year }: Props) {
   const isMoving = useRef(false);
   const moveIntent = useRef<{ entry: Entry; startX: number } | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
+  const mainContentRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState(0);
 
   const { recordAction, registerExecutors } = useHistory();
-  const { settings, dayWidth } = useSettings();
+  const { settings, dayWidth: settingsDayWidth } = useSettings();
   const rowHeight = settings.gridCellSize;
+
+  // Compute effective dayWidth: use measured container width when in fluid mode (-1)
+  const dayWidth = useMemo(() => {
+    if (settings.calendarWidth === -1 && containerWidth > 0) {
+      // Fluid mode: compute from actual container width (minus padding)
+      const availableWidth = containerWidth - 40; // 20px padding on each side
+      return computeDayWidth(availableWidth);
+    }
+    return settingsDayWidth;
+  }, [settings.calendarWidth, containerWidth, settingsDayWidth]);
+
+  // Measure container width with ResizeObserver
+  useEffect(() => {
+    const el = mainContentRef.current;
+    if (!el) return;
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) {
+        setContainerWidth(entry.contentRect.width);
+      }
+    });
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   const loadEntries = useCallback(async () => {
     const data = await fetchEntries(year);
@@ -634,19 +662,24 @@ export default function YearGrid({ year }: Props) {
   const today = new Date();
   const todayDay = today.getDate();
 
+  // Update CSS variable when dayWidth changes
+  useEffect(() => {
+    document.documentElement.style.setProperty('--grid-day-width', `${dayWidth}px`);
+  }, [dayWidth]);
+
   return (
     <div className={styles.wrapper}>
-      <div className={styles.mainContent}>
-        <div className={styles.toolbar}>
-          <CategoryFilter
-            categories={categories}
-            activeCategory={activeCategory}
-            onSelect={setActiveCategory}
-          />
-        </div>
-        <div className={styles.gridCenter}>
-          <div className={styles.grid} ref={gridRef}>
-            {/* Header row */}
+      <div className={styles.mainContent} ref={mainContentRef}>
+        {/* Sticky header: toolbar + day headers */}
+        <div className={styles.stickyHeader}>
+          <div className={styles.toolbar}>
+            <CategoryFilter
+              categories={categories}
+              activeCategory={activeCategory}
+              onSelect={setActiveCategory}
+            />
+          </div>
+          <div className={styles.dayHeaderRow}>
             <div className={styles.headerLabel}>Month</div>
             {Array.from({ length: 31 }, (_, i) => {
               const day = i + 1;
@@ -665,7 +698,11 @@ export default function YearGrid({ year }: Props) {
                 </div>
               );
             })}
+          </div>
+        </div>
 
+        <div className={styles.gridCenter}>
+          <div className={styles.grid} ref={gridRef}>
             {/* Layer 1: Background MonthRows */}
             {Array.from({ length: 12 }, (_, i) => {
               const month = i + 1;

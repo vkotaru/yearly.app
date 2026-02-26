@@ -1,17 +1,18 @@
 .app {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   font-family: var(--font-family);
   font-size: var(--font-size);
   background: var(--bg-app);
+  overflow: hidden;
 }
 
 .app main {
   flex: 1;
   display: flex;
-  overflow-y: auto;
-  overflow-x: hidden;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .header {
@@ -19,12 +20,24 @@
   background: linear-gradient(135deg, var(--neutral-900) 0%, var(--neutral-800) 100%);
   color: var(--text-inverse);
   box-shadow: var(--shadow-lg);
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
   position: sticky;
   top: 0;
   z-index: 50;
+}
+
+.headerLeft {
+  /* Spacer for grid balance */
+  display: flex;
+}
+
+.headerCenter {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  justify-content: center;
 }
 
 .header h1 {
@@ -36,6 +49,59 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+.yearNav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.yearNavBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  transition: var(--transition-normal);
+}
+
+.yearNavBtn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #fff;
+}
+
+.yearDisplay {
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+  min-width: 50px;
+  text-align: center;
+}
+
+.todayBtn {
+  padding: 4px 10px;
+  margin-left: 4px;
+  border: 1px solid var(--accent-400);
+  border-radius: var(--radius-md);
+  background: rgba(var(--accent-500-rgb, 139, 92, 246), 0.2);
+  color: var(--accent-200);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition-normal);
+}
+
+.todayBtn:hover {
+  background: rgba(var(--accent-500-rgb, 139, 92, 246), 0.35);
+  border-color: var(--accent-300);
+  color: #fff;
 }
 
 .settingsBtn {
@@ -87,6 +153,7 @@
 .headerRight {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 12px;
 }
 

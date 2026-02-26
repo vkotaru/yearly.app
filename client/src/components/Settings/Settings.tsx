@@ -98,24 +98,27 @@ export default function Settings({ onClose }: Props)
           <label className={styles.label}>
             Calendar Width{' '}
             <span className={styles.value}>
-              {settings.calendarWidth === 0 ? 'Full Width' : `${settings.calendarWidth}px`}
+              {settings.calendarWidth === -1 ? 'Fill Container' : `${settings.calendarWidth}px`}
             </span>
           </label>
           <input
             type="range"
-            min={0}
-            max={1600}
+            min={800}
+            max={2000}
             step={50}
-            value={settings.calendarWidth}
-            onChange={(e) => updateSettings({ calendarWidth: Number(e.target.value) })}
+            value={settings.calendarWidth === -1 ? 2000 : settings.calendarWidth}
+            onChange={(e) => {
+              const val = Number(e.target.value);
+              updateSettings({ calendarWidth: val >= 2000 ? -1 : val });
+            }}
             className={styles.slider}
           />
           <div className={styles.sliderLabels}>
-            <span>Full Width</span>
-            <span>1600px</span>
+            <span>800px</span>
+            <span>Fill</span>
           </div>
           <div className={styles.widthHint}>
-            Set to 0 (left) for full-width fluid layout.
+            Slide right to fill available width, or set a fixed constraint.
           </div>
         </div>
 

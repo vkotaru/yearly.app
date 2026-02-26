@@ -10,11 +10,12 @@ import FeedbackToast from './components/FeedbackToast/FeedbackToast';
 import { useUndoRedoKeyboard } from './hooks/useUndoRedoKeyboard';
 import styles from './App.module.css';
 
-const YEAR = 2026;
+const CURRENT_YEAR = new Date().getFullYear();
 
 // Inner component that uses history hooks (must be inside HistoryProvider)
 function MainApp({ user, logout }: { user: { name: string; picture?: string }; logout: () => void }) {
   const [showSettings, setShowSettings] = useState(false);
+  const [year, setYear] = useState(CURRENT_YEAR);
 
   // Enable keyboard shortcuts for undo/redo
   useUndoRedoKeyboard();
@@ -22,7 +23,40 @@ function MainApp({ user, logout }: { user: { name: string; picture?: string }; l
   return (
     <div className={styles.app}>
       <header className={styles.header}>
-        <h1>{YEAR} Yearly Planner</h1>
+        <div className={styles.headerLeft} />
+        <div className={styles.headerCenter}>
+          <h1>Yearly Planner</h1>
+          <div className={styles.yearNav}>
+            <button
+              className={styles.yearNavBtn}
+              onClick={() => setYear(y => y - 1)}
+              title="Previous year"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="15 18 9 12 15 6" />
+              </svg>
+            </button>
+            <span className={styles.yearDisplay}>{year}</span>
+            <button
+              className={styles.yearNavBtn}
+              onClick={() => setYear(y => y + 1)}
+              title="Next year"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </button>
+            {year !== CURRENT_YEAR && (
+              <button
+                className={styles.todayBtn}
+                onClick={() => setYear(CURRENT_YEAR)}
+                title="Go to current year"
+              >
+                Today
+              </button>
+            )}
+          </div>
+        </div>
         <div className={styles.headerRight}>
           <UndoRedoButtons />
           <div className={styles.userInfo}>
@@ -55,7 +89,7 @@ function MainApp({ user, logout }: { user: { name: string; picture?: string }; l
         </div>
       </header>
       <main>
-        <YearGrid year={YEAR} />
+        <YearGrid year={year} />
       </main>
       {showSettings && <Settings onClose={() => setShowSettings(false)} />}
       <FeedbackToast />
