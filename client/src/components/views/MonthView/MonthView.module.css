@@ -250,9 +250,13 @@
 
 /* Responsive - mobile landscape */
 @media (max-width: 900px) {
+  .gridCenter {
+    width: 100%;
+  }
+
   .calendar {
     width: 100%;
-    max-width: 700px;
+    max-width: 100%;
   }
 
   .dayHeaders {

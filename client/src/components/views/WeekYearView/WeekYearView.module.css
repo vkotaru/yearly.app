@@ -223,7 +223,7 @@
 }
 
 /* Responsive - tablet */
-@media (max-width: 900px) {
+@media (max-width: 1200px) {
   .header {
     grid-template-columns: 60px repeat(7, 120px);
   }
@@ -238,8 +238,38 @@
   }
 }
 
+/* Responsive - tablet small */
+@media (max-width: 950px) {
+  .gridCenter {
+    width: 100%;
+  }
+
+  .header {
+    grid-template-columns: 50px repeat(7, 1fr);
+  }
+
+  .weekRow {
+    grid-template-columns: 50px repeat(7, 1fr);
+    min-height: 52px;
+  }
+
+  .monthLabel {
+    font-size: 10px;
+    padding: 6px;
+  }
+
+  .dayCell {
+    min-height: 52px;
+    padding: 4px;
+  }
+}
+
 /* Responsive - mobile */
 @media (max-width: 600px) {
+  .gridCenter {
+    width: 100%;
+  }
+
   .content {
     padding: 8px 12px 12px;
   }
