@@ -16,6 +16,7 @@ interface Props {
   isDimmed: boolean;
   isBeingMoved: boolean;
   isResizing: boolean;
+  isBackground?: boolean;
   resizeDayEnd?: number;
   resizeEndMonth?: number;
   onMouseDown: (entry: Entry, clientX: number) => void;
@@ -24,7 +25,7 @@ interface Props {
 
 export default function EntryOverlay({
   entry, year, monthOffsets, rowHeight, dayWidth, isDimmed, isBeingMoved, isResizing,
-  resizeDayEnd, resizeEndMonth,
+  isBackground = false, resizeDayEnd, resizeEndMonth,
   onMouseDown, onResizeStart,
 }: Props) {
   // Adjust entry dimensions if resizing
@@ -69,6 +70,7 @@ export default function EntryOverlay({
             styles.entryOverlay,
             isPast ? styles.past : '',
             entry.is_tentative ? styles.tentative : '',
+            isBackground ? styles.background : '',
             !segment.isStart ? styles.continuationLeft : '',
             !segment.isEnd ? styles.continuationRight : '',
           ].filter(Boolean).join(' ')}
@@ -79,7 +81,7 @@ export default function EntryOverlay({
             height: segment.height,
             backgroundColor: entry.color,
             color: textColor,
-            opacity: isBeingMoved ? 0.3 : isDimmed ? 0.2 : 1,
+            opacity: isBeingMoved ? 0.3 : isDimmed ? 0.2 : isBackground ? 0.4 : 1,
           }}
           onMouseDown={(e) => {
             if (e.button !== 0) return;

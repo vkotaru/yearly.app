@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import type { Entry, Comment, Todo, CreateEntryDto, UpdateEntryDto } from '../../../../shared/types';
 import { fetchComments, createComment, deleteComment, fetchTodos, createTodo, updateTodo, deleteTodo } from '../../api/entries';
 import { getDaysInMonth, getMonthName } from '../../utils/calendar';
+import { useSettings } from '../../contexts/SettingsContext';
 import styles from './EntryEditor.module.css';
 
 // Modern color palette with softer, more sophisticated tones
@@ -91,6 +92,8 @@ interface Props {
 export default function EntryEditor({
   year, month, dayStart, dayEnd, rowIndex, existingEntry, endMonth, onSave, onDelete, onClose,
 }: Props) {
+  const { settings, updateSettings } = useSettings();
+  const backgroundCategories = settings.backgroundCategories || [];
   const isCrossMonth = endMonth !== undefined && endMonth !== month;
   const maxDay = getDaysInMonth(year, month);
   const [title, setTitle] = useState(existingEntry?.title ?? '');
@@ -464,6 +467,26 @@ export default function EntryEditor({
             />
             <span>Private (only visible to you)</span>
           </label>
+          {category && (
+            <label className={styles.privacyToggle}>
+              <input
+                type="checkbox"
+                checked={backgroundCategories.includes(category)}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    updateSettings({
+                      backgroundCategories: [...backgroundCategories, category]
+                    });
+                  } else {
+                    updateSettings({
+                      backgroundCategories: backgroundCategories.filter(c => c !== category)
+                    });
+                  }
+                }}
+              />
+              <span>Background category (renders subtle, hidden in list)</span>
+            </label>
+          )}
         </div>
 
         {existingEntry && (

@@ -46,6 +46,22 @@
   opacity: 0.85;
 }
 
+/* Background entries: subtle, lower z-index */
+.background {
+  opacity: 0.4;
+  z-index: 5;
+  box-shadow: none;
+}
+
+.background:hover {
+  opacity: 0.6;
+  z-index: 6;
+}
+
+.background .title {
+  font-weight: 400;
+}
+
 /* Tentative entries: dashed border */
 .tentative {
   border: 2px dashed currentColor;

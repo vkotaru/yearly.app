@@ -101,7 +101,8 @@ router.put('/:id', (req, res) => {
   }
 
   // Ownership check: only owner can edit their entries
-  if (existing.user_id !== req.user!.id) {
+  // Allow editing entries with null user_id (legacy entries created before auth)
+  if (existing.user_id !== null && existing.user_id !== req.user!.id) {
     res.status(403).json({ error: 'Forbidden - you can only edit your own entries' });
     return;
   }
@@ -161,7 +162,8 @@ router.delete('/:id', (req, res) => {
   }
 
   // Ownership check: only owner can delete their entries
-  if (existing.user_id !== req.user!.id) {
+  // Allow deleting entries with null user_id (legacy entries created before auth)
+  if (existing.user_id !== null && existing.user_id !== req.user!.id) {
     res.status(403).json({ error: 'Forbidden - you can only delete your own entries' });
     return;
   }

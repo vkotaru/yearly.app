@@ -37,3 +37,60 @@
   color: #fff !important;
   border-color: var(--accent-500) !important;
 }
+
+/* Background category chip (marked as subtle) */
+.background {
+  opacity: 0.6;
+  border-style: dashed;
+}
+
+.background:hover {
+  opacity: 0.8;
+}
+
+/* Background toggle button */
+.chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.bgToggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  font-size: 9px;
+  font-weight: 700;
+  border-radius: 3px;
+  background: var(--neutral-200);
+  color: var(--text-tertiary);
+  margin-left: 2px;
+  transition: all 0.12s ease;
+}
+
+.bgToggle:hover {
+  background: var(--neutral-300);
+  color: var(--text-primary);
+}
+
+.bgActive {
+  background: var(--accent-200);
+  color: var(--accent-700);
+}
+
+.active .bgToggle {
+  background: rgba(255, 255, 255, 0.25);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.active .bgToggle:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.active .bgActive {
+  background: rgba(255, 255, 255, 0.5);
+  color: #fff;
+}

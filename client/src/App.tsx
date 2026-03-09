@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { HistoryProvider } from './contexts/HistoryContext';
-import YearGrid from './components/YearGrid/YearGrid';
+import { EntriesProvider } from './contexts/EntriesContext';
+import ViewContainer from './components/views/ViewContainer';
 import Settings from './components/Settings/Settings';
 import Login from './components/Login/Login';
 import UndoRedoButtons from './components/UndoRedoButtons/UndoRedoButtons';
@@ -89,7 +90,9 @@ function MainApp({ user, logout }: { user: { name: string; picture?: string }; l
         </div>
       </header>
       <main>
-        <YearGrid year={year} />
+        <EntriesProvider year={year}>
+          <ViewContainer year={year} />
+        </EntriesProvider>
       </main>
       {showSettings && <Settings onClose={() => setShowSettings(false)} />}
       <FeedbackToast />

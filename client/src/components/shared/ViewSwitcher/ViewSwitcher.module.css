@@ -1,0 +1,61 @@
+.switcher {
+  display: flex;
+  gap: 2px;
+  background: var(--neutral-100);
+  border-radius: var(--radius-md);
+  padding: 2px;
+}
+
+.button {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  white-space: nowrap;
+}
+
+.button:hover {
+  background: var(--neutral-200);
+  color: var(--text-primary);
+}
+
+.button.active {
+  background: var(--bg-surface);
+  color: var(--accent-600);
+  box-shadow: var(--shadow-sm);
+}
+
+.icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.label {
+  display: none;
+}
+
+/* Show labels on larger screens */
+@media (min-width: 768px) {
+  .label {
+    display: inline;
+  }
+}
+
+/* Compact mode on small screens */
+@media (max-width: 480px) {
+  .button {
+    padding: 6px 8px;
+  }
+
+  .icon {
+    font-size: 16px;
+  }
+}

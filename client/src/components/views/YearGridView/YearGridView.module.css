@@ -1,0 +1,126 @@
+/* ── Outer wrapper: fills the scrollable area ── */
+.wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* ── Main content area: scrollable container ── */
+.mainContent {
+  flex: 1;
+  height: 0;
+  overflow: auto;
+  padding: 0 20px 20px;
+}
+
+/* ── Sticky header: day headers ── */
+.stickyHeader {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--bg-app);
+  padding-top: 12px;
+}
+
+/* ── Day header row (outside grid for sticky behavior) ── */
+.dayHeaderRow {
+  display: grid;
+  grid-template-columns: 72px repeat(31, var(--grid-day-width, 40px));
+  width: fit-content;
+  margin: 0 auto;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-bottom: none;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+/* ── Centering container for the grid ── */
+.gridCenter {
+  width: fit-content;
+  margin: 0 auto;
+}
+
+/* ── The CSS Grid ── */
+.grid {
+  display: grid;
+  grid-template-columns: 72px repeat(31, var(--grid-day-width, 40px));
+  width: fit-content;
+  border: 1px solid var(--border-default);
+  border-top: none;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  background: var(--bg-surface);
+  position: relative;
+}
+
+/* Entry overlay layer - positioned on top of background grid */
+.entryLayer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+
+.entryLayer > * {
+  pointer-events: auto;
+}
+
+/* Moving entry overlay */
+.movingOverlay {
+  transition: none;
+}
+
+/* ── Header row ── */
+.headerLabel {
+  font-weight: 600;
+  font-size: 10px;
+  color: var(--text-inverse);
+  background: linear-gradient(180deg, var(--accent-500) 0%, var(--accent-600) 100%);
+  padding: 8px 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid rgba(0, 0, 0, 0.1);
+  border-bottom: 2px solid var(--accent-700);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.headerDay {
+  font-weight: 600;
+  font-size: 11px;
+  color: var(--text-inverse);
+  background: linear-gradient(180deg, var(--accent-500) 0%, var(--accent-600) 100%);
+  padding: 8px 0;
+  text-align: center;
+  border-right: 1px solid rgba(0, 0, 0, 0.06);
+  border-bottom: 2px solid var(--accent-700);
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.headerDay:hover {
+  background: linear-gradient(180deg, var(--accent-400) 0%, var(--accent-500) 100%);
+}
+
+.headerDayActive {
+  background: linear-gradient(180deg, var(--neutral-700) 0%, var(--neutral-800) 100%) !important;
+  border-bottom-color: var(--neutral-900);
+}
+
+.headerToday {
+  background: linear-gradient(180deg, var(--success-500) 0%, var(--success-600) 100%) !important;
+  border-bottom-color: var(--success-700);
+  font-weight: 700;
+  box-shadow: inset 0 -3px 0 var(--success-400);
+}
+
+.headerWeekend {
+  background: linear-gradient(180deg, var(--neutral-400) 0%, var(--neutral-500) 100%);
+  border-bottom-color: var(--neutral-600);
+}

@@ -1,11 +1,17 @@
 import { createContext, useContext, useState, useEffect, useMemo, type ReactNode } from 'react';
 
+export type ViewMode = 'year-grid' | 'week-year' | 'month' | 'list';
+
 export interface Settings
 {
   fontFamily: string;
   fontSize: number;      // base size in px (grid text scales from this)
   gridCellSize: number;  // cell height in px
   calendarWidth: number; // max content width in px (0 = fluid)
+  viewMode: ViewMode;    // current view mode
+  selectedMonth: number; // for month view navigation (1-12)
+  backgroundCategories: string[]; // categories that render as subtle backgrounds
+  hideBackgroundsInList: boolean; // hide background entries in list view
 }
 
 // Grid constants
@@ -46,6 +52,10 @@ const DEFAULT_SETTINGS: Settings = {
   fontSize: 13,
   gridCellSize: 24,
   calendarWidth: -1, // -1 = fluid/fill, positive = fixed px
+  viewMode: 'year-grid',
+  selectedMonth: new Date().getMonth() + 1, // Current month (1-12)
+  backgroundCategories: [],
+  hideBackgroundsInList: true,
 };
 
 const STORAGE_KEY = 'yearly-planner-settings';
