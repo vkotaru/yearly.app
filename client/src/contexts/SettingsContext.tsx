@@ -1,29 +1,30 @@
-import { createContext, useContext, useState, useEffect, useMemo, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo, useRef, useCallback, type ReactNode } from 'react';
+import { fetchSettings, patchSettings } from '../api/settings';
 
 export type ViewMode = 'year-grid' | 'week-year' | 'month' | 'list';
 
-export interface Settings
-{
+export interface Settings {
+  // Local-only settings (device-specific, stored in localStorage)
   fontFamily: string;
-  fontSize: number;      // base size in px (grid text scales from this)
-  gridCellSize: number;  // cell height in px
-  calendarWidth: number; // max content width in px (0 = fluid)
-  viewMode: ViewMode;    // current view mode
-  selectedMonth: number; // for month view navigation (1-12)
-  backgroundCategories: string[]; // categories that render as subtle backgrounds
-  hideBackgroundsInList: boolean; // hide background entries in list view
+  fontSize: number;
+  gridCellSize: number;
+  calendarWidth: number;
+  viewMode: ViewMode;
+  selectedMonth: number;
+
+  // Synced settings (stored in database, shared across devices)
+  backgroundCategories: string[];
+  hideBackgroundsInList: boolean;
 }
+
+// Settings that sync to the database
+const SYNCED_KEYS: (keyof Settings)[] = ['backgroundCategories', 'hideBackgroundsInList'];
 
 // Grid constants
 const MONTH_LABEL_WIDTH = 72;
 const DEFAULT_DAY_WIDTH = 40;
 const MIN_DAY_WIDTH = 28;
 
-/**
- * Calculate day column width based on calendar width setting.
- * If calendarWidth is -1 (fluid), use default width (actual width computed by YearGrid).
- * Otherwise, compute to fit exactly within the specified width.
- */
 export function computeDayWidth(calendarWidth: number): number {
   if (calendarWidth < 0) return DEFAULT_DAY_WIDTH;
   const available = calendarWidth - MONTH_LABEL_WIDTH;
@@ -51,64 +52,70 @@ const DEFAULT_SETTINGS: Settings = {
   fontFamily: "'Geist', sans-serif",
   fontSize: 13,
   gridCellSize: 24,
-  calendarWidth: -1, // -1 = fluid/fill, positive = fixed px
+  calendarWidth: -1,
   viewMode: 'year-grid',
-  selectedMonth: new Date().getMonth() + 1, // Current month (1-12)
+  selectedMonth: new Date().getMonth() + 1,
   backgroundCategories: [],
   hideBackgroundsInList: true,
 };
 
 const STORAGE_KEY = 'yearly-planner-settings';
 
-function loadSettings(): Settings
-{
-  try
-  {
+function loadLocalSettings(): Settings {
+  try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       const parsed = { ...DEFAULT_SETTINGS, ...JSON.parse(stored) };
-      // Migrate old calendarWidth: 0 (old fluid) to -1 (new fluid)
-      if (parsed.calendarWidth === 0) {
-        parsed.calendarWidth = -1;
-      }
-      // Clamp old values below 800 to 800
-      if (parsed.calendarWidth > 0 && parsed.calendarWidth < 800) {
-        parsed.calendarWidth = 800;
-      }
+      if (parsed.calendarWidth === 0) parsed.calendarWidth = -1;
+      if (parsed.calendarWidth > 0 && parsed.calendarWidth < 800) parsed.calendarWidth = 800;
       return parsed;
     }
   } catch { /* ignore */ }
   return DEFAULT_SETTINGS;
 }
 
-interface SettingsContextValue
-{
+interface SettingsContextValue {
   settings: Settings;
-  dayWidth: number;  // computed from calendarWidth
+  dayWidth: number;
   updateSettings: (patch: Partial<Settings>) => void;
+  syncedLoaded: boolean;
 }
 
 const SettingsContext = createContext<SettingsContextValue>({
   settings: DEFAULT_SETTINGS,
   dayWidth: DEFAULT_DAY_WIDTH,
-  updateSettings: () => { },
+  updateSettings: () => {},
+  syncedLoaded: false,
 });
 
-export function SettingsProvider({ children }: { children: ReactNode })
-{
-  const [settings, setSettings] = useState<Settings>(loadSettings);
+export function SettingsProvider({ children }: { children: ReactNode }) {
+  const [settings, setSettings] = useState<Settings>(loadLocalSettings);
+  const [syncedLoaded, setSyncedLoaded] = useState(false);
+  const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingSyncRef = useRef<Partial<Settings> | null>(null);
 
-  // Compute day width from calendar width setting
   const dayWidth = useMemo(
     () => computeDayWidth(settings.calendarWidth),
     [settings.calendarWidth]
   );
 
-  useEffect(() =>
-  {
+  // Load synced settings from API on mount
+  useEffect(() => {
+    fetchSettings()
+      .then((remote) => {
+        if (remote && Object.keys(remote).length > 0) {
+          setSettings((prev) => ({ ...prev, ...remote }));
+        }
+        setSyncedLoaded(true);
+      })
+      .catch(() => {
+        setSyncedLoaded(true); // Continue with local settings on error
+      });
+  }, []);
+
+  // Save to localStorage and apply CSS variables
+  useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-    // Apply as CSS variables on :root
-    // Note: --grid-day-width is set by YearGrid (handles both fixed and fluid modes)
     const root = document.documentElement;
     root.style.setProperty('--font-family', settings.fontFamily);
     root.style.setProperty('--font-size', `${settings.fontSize}px`);
@@ -119,19 +126,46 @@ export function SettingsProvider({ children }: { children: ReactNode })
     );
   }, [settings]);
 
-  function updateSettings(patch: Partial<Settings>)
-  {
+  // Debounced sync to API
+  const syncToApi = useCallback((patch: Partial<Settings>) => {
+    // Filter to only synced keys
+    const syncedPatch: Partial<Settings> = {};
+    for (const key of SYNCED_KEYS) {
+      if (key in patch) {
+        (syncedPatch as any)[key] = (patch as any)[key];
+      }
+    }
+
+    if (Object.keys(syncedPatch).length === 0) return;
+
+    // Merge with pending sync
+    pendingSyncRef.current = { ...pendingSyncRef.current, ...syncedPatch };
+
+    // Debounce: wait 500ms before syncing
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current);
+    }
+
+    syncTimeoutRef.current = setTimeout(() => {
+      if (pendingSyncRef.current) {
+        patchSettings(pendingSyncRef.current).catch(console.error);
+        pendingSyncRef.current = null;
+      }
+    }, 500);
+  }, []);
+
+  function updateSettings(patch: Partial<Settings>) {
     setSettings((prev) => ({ ...prev, ...patch }));
+    syncToApi(patch);
   }
 
   return (
-    <SettingsContext.Provider value={{ settings, dayWidth, updateSettings }}>
+    <SettingsContext.Provider value={{ settings, dayWidth, updateSettings, syncedLoaded }}>
       {children}
     </SettingsContext.Provider>
   );
 }
 
-export function useSettings()
-{
+export function useSettings() {
   return useContext(SettingsContext);
 }
