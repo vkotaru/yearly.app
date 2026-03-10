@@ -181,3 +181,30 @@ const MONTH_NAMES = [
 export function getMonthName(month: number): string {
   return MONTH_NAMES[month - 1] || '';
 }
+
+/**
+ * Get the week number that contains today, for the given year
+ * Returns -1 if today is not in the given year
+ */
+export function getCurrentWeekNumber(year: number): number {
+  const today = new Date();
+
+  // If today is not in this year, return -1
+  if (today.getFullYear() !== year) {
+    return -1;
+  }
+
+  const weeks = getWeeksInYear(year);
+  const todayTime = today.setHours(0, 0, 0, 0);
+
+  for (const week of weeks) {
+    const startTime = new Date(week.startDate).setHours(0, 0, 0, 0);
+    const endTime = new Date(week.endDate).setHours(23, 59, 59, 999);
+
+    if (todayTime >= startTime && todayTime <= endTime) {
+      return week.weekNumber;
+    }
+  }
+
+  return -1;
+}

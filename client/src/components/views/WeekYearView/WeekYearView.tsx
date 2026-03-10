@@ -1,8 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import type { Entry } from '../../../../../shared/types';
 import { useEntries } from '../../../contexts/EntriesContext';
 import { useSettings } from '../../../contexts/SettingsContext';
-import { getWeeksInYear, getWeekMonthLabel, getEntriesForDate, getMonthName } from '../../../utils/weekCalculations';
+import { getWeeksInYear, getWeekMonthLabel, getEntriesForDate, getMonthName, getCurrentWeekNumber } from '../../../utils/weekCalculations';
 import EntryEditor from '../../EntryEditor/EntryEditor';
 import EntryDetailPanel from '../../EntryDetailPanel/EntryDetailPanel';
 import styles from './WeekYearView.module.css';
@@ -26,9 +26,26 @@ export default function WeekYearView({ year }: Props) {
   const { settings } = useSettings();
   const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
   const [editor, setEditor] = useState<EditorState | null>(null);
+  const currentWeekRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const backgroundCategories = settings.backgroundCategories || [];
   const weeks = useMemo(() => getWeeksInYear(year), [year]);
+  const currentWeekNumber = useMemo(() => getCurrentWeekNumber(year), [year]);
+
+  // Auto-scroll to current week on mount
+  useEffect(() => {
+    if (currentWeekRef.current && scrollContainerRef.current) {
+      // Small delay to ensure DOM is ready
+      const timer = setTimeout(() => {
+        currentWeekRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [year]);
 
   const filteredEntryIds = useMemo(() => {
     if (!activeCategory) return null;
@@ -83,21 +100,21 @@ export default function WeekYearView({ year }: Props) {
 
   return (
     <div className={styles.wrapper}>
-      <div className={styles.content}>
-        <div className={styles.gridCenter}>
-          {/* Header row with day names */}
-          <div className={styles.header}>
-            <div className={styles.monthLabelHeader}>Month</div>
-            {DAY_NAMES.map((day, i) => (
-              <div
-                key={day}
-                className={`${styles.dayHeader} ${i >= 5 ? styles.weekend : ''}`}
-              >
-                {day}
-              </div>
-            ))}
-          </div>
+      <div className={styles.content} ref={scrollContainerRef}>
+        {/* Sticky header row with day names */}
+        <div className={styles.header}>
+          <div className={styles.monthLabelHeader}></div>
+          {DAY_NAMES.map((day, i) => (
+            <div
+              key={day}
+              className={`${styles.dayHeader} ${i >= 5 ? styles.weekend : ''}`}
+            >
+              {day}
+            </div>
+          ))}
+        </div>
 
+        <div className={styles.gridCenter}>
           {/* Week rows */}
           <div className={styles.weeksContainer}>
             {weeks.map((week) => {
@@ -107,8 +124,13 @@ export default function WeekYearView({ year }: Props) {
                 lastShownMonth = month;
               }
 
+              const isCurrentWeek = week.weekNumber === currentWeekNumber;
               return (
-                <div key={week.weekNumber} className={styles.weekRow}>
+                <div
+                  key={week.weekNumber}
+                  className={`${styles.weekRow} ${isCurrentWeek ? styles.currentWeek : ''}`}
+                  ref={isCurrentWeek ? currentWeekRef : undefined}
+                >
                   {/* Month label */}
                   <div className={`${styles.monthLabel} ${shouldShowLabel ? styles.showLabel : ''}`}>
                     {shouldShowLabel && getMonthName(month)}
