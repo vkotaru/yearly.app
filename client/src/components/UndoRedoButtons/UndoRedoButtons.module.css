@@ -31,3 +31,10 @@
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+/* Hide on mobile - keyboard shortcuts still work */
+@media (max-width: 600px) {
+  .container {
+    display: none;
+  }
+}
