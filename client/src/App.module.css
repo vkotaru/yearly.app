@@ -280,7 +280,7 @@
   }
 
   .header h1 {
-    display: none;
+    font-size: 12px;
   }
 
   .headerCenter {
@@ -308,14 +308,5 @@
 
   .headerRight {
     gap: 4px;
-  }
-
-  .logoutBtn {
-    padding: 6px 8px;
-    font-size: 10px;
-  }
-
-  .settingsBtn {
-    padding: 8px;
   }
 }
