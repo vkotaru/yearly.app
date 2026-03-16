@@ -170,6 +170,66 @@
   font-style: italic;
 }
 
+/* ── Backup / Restore ── */
+.backupActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.backupBtn {
+  padding: 8px 16px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-hover);
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-secondary);
+  transition: var(--transition-normal);
+}
+
+.backupBtn:hover {
+  background: var(--bg-surface);
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+.restoreBtn {
+  color: var(--text-tertiary);
+}
+
+.restoreBtnConfirm {
+  background: var(--accent-50);
+  border-color: var(--accent-500);
+  color: var(--accent-700);
+}
+
+.restoreBtnConfirm:hover {
+  background: var(--accent-100);
+}
+
+.restoreConfirm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.restoreWarning {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.restoreActions {
+  display: flex;
+  gap: 8px;
+}
+
+.backupStatus {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
 /* ── Preview ── */
 .preview {
   padding: 16px;

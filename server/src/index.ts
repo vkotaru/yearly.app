@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 import authRouter from './routes/auth.js';
 import entriesRouter from './routes/entries.js';
 import settingsRouter from './routes/settings.js';
+import backupRouter from './routes/backup.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -39,12 +40,13 @@ app.use(cors({
   },
   credentials: true,
 }));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
 
 app.use('/api/auth', authRouter);
 app.use('/api/entries', entriesRouter);
 app.use('/api/settings', settingsRouter);
+app.use('/api/backup', backupRouter);
 
 // In production, serve the built frontend
 if (process.env.NODE_ENV === 'production') {
