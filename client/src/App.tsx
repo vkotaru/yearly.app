@@ -9,6 +9,7 @@ import Login from './components/Login/Login';
 import UndoRedoButtons from './components/UndoRedoButtons/UndoRedoButtons';
 import UserMenu from './components/UserMenu/UserMenu';
 import FeedbackToast from './components/FeedbackToast/FeedbackToast';
+import SWUpdatePrompt from './components/SWUpdatePrompt/SWUpdatePrompt';
 import { useUndoRedoKeyboard } from './hooks/useUndoRedoKeyboard';
 import styles from './App.module.css';
 
@@ -108,6 +109,7 @@ export default function App() {
   return (
     <AuthProvider>
       <AppContent />
+      <SWUpdatePrompt />
     </AuthProvider>
   );
 }
