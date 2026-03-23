@@ -41,7 +41,7 @@
 /* Conflict toast */
 .conflictToast {
   position: fixed;
-  bottom: 72px;
+  bottom: 120px;
   left: 50%;
   transform: translateX(-50%);
   padding: 10px 16px;

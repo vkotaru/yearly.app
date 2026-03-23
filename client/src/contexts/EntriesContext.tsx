@@ -1,8 +1,8 @@
-import { createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, type ReactNode } from 'react';
 import type { Entry, CreateEntryDto, UpdateEntryDto } from '../../../shared/types';
 import { fetchEntries, createEntry as apiCreateEntry, updateEntry as apiUpdateEntry, deleteEntry as apiDeleteEntry } from '../api/entries';
 import { db, type DexieEntry } from '../lib/db';
-import { addToPendingSync, isOnline, pullChanges } from '../lib/sync';
+import { addToPendingSync, isOnline, onConnectivityChange, pullChanges } from '../lib/sync';
 import { useHistory } from './HistoryContext';
 import type { HistoryAction } from '../types/history';
 
@@ -88,8 +88,11 @@ export function EntriesProvider({ children, year }: EntriesProviderProps) {
         .filter(e => !e._deleted)
         .toArray();
 
+      setEntries(local.map(dexieToEntry));
+      // If we got local data, stop loading immediately.
+      // If Dexie is empty, keep loading=true while we try the API below.
+      // If offline + empty Dexie = finally block catches it.
       if (local.length > 0) {
-        setEntries(local.map(dexieToEntry));
         setLoading(false);
       }
 
@@ -265,6 +268,13 @@ export function EntriesProvider({ children, year }: EntriesProviderProps) {
   // Load entries on year change
   useEffect(() => {
     loadEntries();
+  }, [loadEntries]);
+
+  // Re-sync when coming back online
+  useEffect(() => {
+    return onConnectivityChange((online) => {
+      if (online) loadEntries();
+    });
   }, [loadEntries]);
 
   // Group entries by month

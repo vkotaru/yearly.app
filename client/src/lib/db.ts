@@ -110,7 +110,7 @@ class YearlyDatabase extends Dexie {
       comments: '++localId, serverId, entryLocalId, entryServerId, updated_at',
       todos: '++localId, serverId, entryLocalId, entryServerId, updated_at',
       settings: 'key',
-      pendingSync: '++id, table, operation, serverId, timestamp',
+      pendingSync: '++id, table, operation, localId, serverId, timestamp',
     });
 
     // Future versions go below. Example:
