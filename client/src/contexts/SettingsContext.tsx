@@ -1,5 +1,7 @@
 import { createContext, useContext, useState, useEffect, useMemo, useRef, useCallback, type ReactNode } from 'react';
 import { fetchSettings, patchSettings } from '../api/settings';
+import { db } from '../lib/db';
+import { addToPendingSync, isOnline } from '../lib/sync';
 
 export type ViewMode = 'year-grid' | 'week-year' | 'month' | 'list';
 
@@ -99,17 +101,33 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     [settings.calendarWidth]
   );
 
-  // Load synced settings from API on mount
+  // Load synced settings: Dexie first (instant/offline), then API (background refresh)
   useEffect(() => {
+    // 1. Read from Dexie
+    db.settings.toArray().then((records) => {
+      if (records.length > 0) {
+        const fromDexie: Partial<Settings> = {};
+        for (const r of records) {
+          (fromDexie as any)[r.key] = r.value;
+        }
+        setSettings((prev) => ({ ...prev, ...fromDexie }));
+      }
+    }).catch(() => { /* Dexie not available yet */ });
+
+    // 2. Fetch from API (background refresh, updates Dexie)
     fetchSettings()
-      .then((remote) => {
+      .then(async (remote) => {
         if (remote && Object.keys(remote).length > 0) {
           setSettings((prev) => ({ ...prev, ...remote }));
+          // Persist to Dexie for offline access
+          for (const [key, value] of Object.entries(remote)) {
+            await db.settings.put({ key, value, updated_at: new Date().toISOString() });
+          }
         }
         setSyncedLoaded(true);
       })
       .catch(() => {
-        setSyncedLoaded(true); // Continue with local settings on error
+        setSyncedLoaded(true); // Continue with local/Dexie settings on error
       });
   }, []);
 
@@ -126,7 +144,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     );
   }, [settings]);
 
-  // Debounced sync to API
+  // Debounced sync to API + Dexie persistence
   const syncToApi = useCallback((patch: Partial<Settings>) => {
     // Filter to only synced keys
     const syncedPatch: Partial<Settings> = {};
@@ -138,6 +156,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
     if (Object.keys(syncedPatch).length === 0) return;
 
+    // Always persist synced settings to Dexie (immediate, for offline access)
+    for (const [key, value] of Object.entries(syncedPatch)) {
+      db.settings.put({ key, value, updated_at: new Date().toISOString() }).catch(() => {});
+    }
+
     // Merge with pending sync
     pendingSyncRef.current = { ...pendingSyncRef.current, ...syncedPatch };
 
@@ -148,8 +171,17 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
     syncTimeoutRef.current = setTimeout(() => {
       if (pendingSyncRef.current) {
-        patchSettings(pendingSyncRef.current).catch(console.error);
+        const toSync = pendingSyncRef.current;
         pendingSyncRef.current = null;
+
+        if (isOnline()) {
+          patchSettings(toSync).catch(() => {
+            // Server unavailable — queue for later
+            addToPendingSync('settings', 'update', toSync as Record<string, unknown>);
+          });
+        } else {
+          addToPendingSync('settings', 'update', toSync as Record<string, unknown>);
+        }
       }
     }, 500);
   }, []);
