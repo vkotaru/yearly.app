@@ -39,8 +39,29 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         navigateFallback: 'index.html',
-        navigateFallbackDenylist: [/^\/api\//],
+        navigateFallbackDenylist: [/^\/api\/auth/],
         runtimeCaching: [
+          {
+            // API entries: network-first with cache fallback for offline reads
+            urlPattern: /\/api\/entries\/.*/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'api-entries-cache',
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 60 * 24 * 7, // 7 days
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+              networkTimeoutSeconds: 5,
+            },
+          },
+          {
+            // Sync endpoints: network-only (no caching)
+            urlPattern: /\/api\/sync\/.*/i,
+            handler: 'NetworkOnly',
+          },
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: 'CacheFirst',
