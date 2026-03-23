@@ -9,6 +9,7 @@ import Login from './components/Login/Login';
 import UndoRedoButtons from './components/UndoRedoButtons/UndoRedoButtons';
 import UserMenu from './components/UserMenu/UserMenu';
 import FeedbackToast from './components/FeedbackToast/FeedbackToast';
+import SyncStatus from './components/SyncStatus/SyncStatus';
 import SWUpdatePrompt from './components/SWUpdatePrompt/SWUpdatePrompt';
 import { useUndoRedoKeyboard } from './hooks/useUndoRedoKeyboard';
 import styles from './App.module.css';
@@ -62,6 +63,7 @@ function MainApp({ user, logout }: { user: { name: string; picture?: string }; l
         </div>
         <div className={styles.headerRight}>
           <UndoRedoButtons />
+          <SyncStatus />
           <UserMenu
             user={user}
             onSettings={() => setShowSettings(true)}
