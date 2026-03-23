@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode } from 'react';
 import type { Entry, CreateEntryDto, UpdateEntryDto } from '../../../shared/types';
 import { fetchEntries, createEntry as apiCreateEntry, updateEntry as apiUpdateEntry, deleteEntry as apiDeleteEntry } from '../api/entries';
 import { db, type DexieEntry } from '../lib/db';
@@ -82,17 +82,19 @@ export function EntriesProvider({ children, year }: EntriesProviderProps) {
     setLoading(true);
     try {
       // 1. Read from Dexie (instant, works offline)
-      const local = await db.entries
-        .where('year')
-        .equals(year)
-        .filter(e => !e._deleted)
-        .toArray();
+      let localEntries: DexieEntry[] = [];
+      try {
+        localEntries = await db.entries
+          .where('year')
+          .equals(year)
+          .filter(e => !e._deleted)
+          .toArray();
+      } catch {
+        // IndexedDB unavailable (private browsing, quota) — fall through to API
+      }
 
-      setEntries(local.map(dexieToEntry));
-      // If we got local data, stop loading immediately.
-      // If Dexie is empty, keep loading=true while we try the API below.
-      // If offline + empty Dexie = finally block catches it.
-      if (local.length > 0) {
+      setEntries(localEntries.map(dexieToEntry));
+      if (localEntries.length > 0) {
         setLoading(false);
       }
 
@@ -102,44 +104,48 @@ export function EntriesProvider({ children, year }: EntriesProviderProps) {
           const remote = await fetchEntries(year);
 
           // Upsert remote entries into Dexie
-          for (const entry of remote) {
-            const existing = await db.entries.where('serverId').equals(entry.id).first();
-            if (existing) {
-              await db.entries.update(existing.localId!, {
-                ...entryToDexie(entry),
-                serverId: entry.id,
-              });
-            } else {
-              await db.entries.add({
-                ...entryToDexie(entry),
-                serverId: entry.id,
-              });
-            }
-          }
-
-          // Remove local entries with serverIds that no longer exist on server
-          const remoteIds = new Set(remote.map(e => e.id));
-          const allLocal = await db.entries.where('year').equals(year).toArray();
-          for (const local of allLocal) {
-            if (local.serverId && !remoteIds.has(local.serverId) && !local._deleted) {
-              // Check if this is a pending local change
-              const pending = await db.pendingSync
-                .where('localId')
-                .equals(local.localId!)
-                .count();
-              if (pending === 0) {
-                await db.entries.delete(local.localId!);
+          try {
+            for (const entry of remote) {
+              const existing = await db.entries.where('serverId').equals(entry.id).first();
+              if (existing) {
+                await db.entries.update(existing.localId!, {
+                  ...entryToDexie(entry),
+                  serverId: entry.id,
+                });
+              } else {
+                await db.entries.add({
+                  ...entryToDexie(entry),
+                  serverId: entry.id,
+                });
               }
             }
-          }
 
-          // Re-read from Dexie to get merged state
-          const merged = await db.entries
-            .where('year')
-            .equals(year)
-            .filter(e => !e._deleted)
-            .toArray();
-          setEntries(merged.map(dexieToEntry));
+            // Remove local entries with serverIds that no longer exist on server
+            const remoteIds = new Set(remote.map(e => e.id));
+            const allLocal = await db.entries.where('year').equals(year).toArray();
+            for (const le of allLocal) {
+              if (le.serverId && !remoteIds.has(le.serverId) && !le._deleted) {
+                const pending = await db.pendingSync
+                  .where('localId')
+                  .equals(le.localId!)
+                  .count();
+                if (pending === 0) {
+                  await db.entries.delete(le.localId!);
+                }
+              }
+            }
+
+            // Re-read from Dexie to get merged state
+            const merged = await db.entries
+              .where('year')
+              .equals(year)
+              .filter(e => !e._deleted)
+              .toArray();
+            setEntries(merged.map(dexieToEntry));
+          } catch {
+            // Dexie write failed — use API data directly
+            setEntries(remote);
+          }
 
           // Pull incremental changes from sync endpoint (if available)
           await pullChanges();
@@ -394,6 +400,7 @@ function entryToDexie(entry: Entry | CreateEntryDto & { id?: number }): Omit<Dex
     user_id: 'user_id' in entry ? entry.user_id as number | undefined : undefined,
     is_private: ('is_private' in entry ? entry.is_private : undefined) ?? false,
     is_tentative: ('is_tentative' in entry ? entry.is_tentative : undefined) ?? false,
+    incomplete_todos: 'incomplete_todos' in entry ? entry.incomplete_todos as number | undefined : undefined,
     created_at: ('created_at' in entry ? entry.created_at as string : undefined) ?? now,
     updated_at: now,
   };
@@ -408,25 +415,35 @@ async function doCreate(dto: CreateEntryDto): Promise<Entry> {
   };
 
   // 1. Write to Dexie
-  const localId = await db.entries.add(dexieData as DexieEntry);
-  const local = (await db.entries.get(localId))!;
-  const entry = dexieToEntry(local);
-
-  // 2. Sync to server (async, non-blocking)
-  if (isOnline()) {
-    try {
-      const serverEntry = await apiCreateEntry(dto);
-      await db.entries.update(localId, { serverId: serverEntry.id });
-      entry.id = serverEntry.id;
-    } catch {
-      // Server unavailable — queue for later
-      await addToPendingSync('entries', 'create', dto as unknown as Record<string, unknown>, localId);
-    }
-  } else {
-    await addToPendingSync('entries', 'create', dto as unknown as Record<string, unknown>, localId);
+  let localId: number | undefined;
+  try {
+    localId = await db.entries.add(dexieData as DexieEntry);
+  } catch {
+    // IndexedDB unavailable — go straight to API
   }
 
-  return entry;
+  if (localId) {
+    const local = (await db.entries.get(localId))!;
+    const entry = dexieToEntry(local);
+
+    // 2. Sync to server
+    if (isOnline()) {
+      try {
+        const serverEntry = await apiCreateEntry(dto);
+        await db.entries.update(localId, { serverId: serverEntry.id });
+        entry.id = serverEntry.id;
+      } catch {
+        await addToPendingSync('entries', 'create', dto as unknown as Record<string, unknown>, localId);
+      }
+    } else {
+      await addToPendingSync('entries', 'create', dto as unknown as Record<string, unknown>, localId);
+    }
+
+    return entry;
+  }
+
+  // Fallback: API-only (no local storage available)
+  return apiCreateEntry(dto);
 }
 
 async function doUpdate(id: number, dto: UpdateEntryDto): Promise<Entry> {

@@ -39,7 +39,7 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         navigateFallback: 'index.html',
-        navigateFallbackDenylist: [/^\/api\/auth/],
+        navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
           {
             // API entries: network-first with cache fallback for offline reads
