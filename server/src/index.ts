@@ -8,6 +8,7 @@ import authRouter from './routes/auth.js';
 import entriesRouter from './routes/entries.js';
 import settingsRouter from './routes/settings.js';
 import backupRouter from './routes/backup.js';
+import syncRouter from './routes/sync.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -47,6 +48,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/entries', entriesRouter);
 app.use('/api/settings', settingsRouter);
 app.use('/api/backup', backupRouter);
+app.use('/api/sync', syncRouter);
 
 // In production, serve the built frontend
 if (process.env.NODE_ENV === 'production') {

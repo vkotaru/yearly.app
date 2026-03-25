@@ -130,6 +130,37 @@ db.exec(`
   )
 `);
 
+// ── Sync support: add deleted_at for soft deletes, updated_at where missing ──
+// entries: add deleted_at
+{
+  const eCols = db.prepare("PRAGMA table_info(entries)").all() as { name: string }[];
+  const eColNames = eCols.map(c => c.name);
+  if (!eColNames.includes('deleted_at')) {
+    try { db.exec(`ALTER TABLE entries ADD COLUMN deleted_at TEXT DEFAULT NULL`); } catch { /* exists */ }
+  }
+}
+
+// comments: add updated_at + deleted_at
+{
+  const cCols = db.prepare("PRAGMA table_info(comments)").all() as { name: string }[];
+  const cColNames = cCols.map(c => c.name);
+  if (!cColNames.includes('updated_at')) {
+    try { db.exec(`ALTER TABLE comments ADD COLUMN updated_at TEXT DEFAULT (datetime('now'))`); } catch { /* exists */ }
+  }
+  if (!cColNames.includes('deleted_at')) {
+    try { db.exec(`ALTER TABLE comments ADD COLUMN deleted_at TEXT DEFAULT NULL`); } catch { /* exists */ }
+  }
+}
+
+// todos: add deleted_at
+{
+  const tCols = db.prepare("PRAGMA table_info(todos)").all() as { name: string }[];
+  const tColNames = tCols.map(c => c.name);
+  if (!tColNames.includes('deleted_at')) {
+    try { db.exec(`ALTER TABLE todos ADD COLUMN deleted_at TEXT DEFAULT NULL`); } catch { /* exists */ }
+  }
+}
+
 // ── User settings table (synced across devices) ──
 db.exec(`
   CREATE TABLE IF NOT EXISTS user_settings (

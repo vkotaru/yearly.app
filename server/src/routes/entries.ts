@@ -30,9 +30,9 @@ router.get('/:year', (req, res) => {
   const userId = req.user!.id;
   const entries = db.prepare(`
     SELECT e.*,
-      (SELECT COUNT(*) FROM todos t WHERE t.entry_id = e.id AND t.completed = 0) as incomplete_todos
+      (SELECT COUNT(*) FROM todos t WHERE t.entry_id = e.id AND t.completed = 0 AND t.deleted_at IS NULL) as incomplete_todos
     FROM entries e
-    WHERE e.year = ? AND (e.is_private = 0 OR e.is_private IS NULL OR e.user_id = ?)
+    WHERE e.year = ? AND e.deleted_at IS NULL AND (e.is_private = 0 OR e.is_private IS NULL OR e.user_id = ?)
     ORDER BY e.month, e.row_index, e.day_start
   `).all(year, userId);
 
@@ -94,7 +94,7 @@ router.put('/:id', (req, res) => {
     return;
   }
 
-  const existing = db.prepare('SELECT * FROM entries WHERE id = ?').get(id) as any;
+  const existing = db.prepare('SELECT * FROM entries WHERE id = ? AND deleted_at IS NULL').get(id) as any;
   if (!existing) {
     res.status(404).json({ error: 'Entry not found' });
     return;
@@ -155,7 +155,7 @@ router.delete('/:id', (req, res) => {
     return;
   }
 
-  const existing = db.prepare('SELECT * FROM entries WHERE id = ?').get(id) as any;
+  const existing = db.prepare('SELECT * FROM entries WHERE id = ? AND deleted_at IS NULL').get(id) as any;
   if (!existing) {
     res.status(404).json({ error: 'Entry not found' });
     return;
@@ -168,7 +168,11 @@ router.delete('/:id', (req, res) => {
     return;
   }
 
-  db.prepare('DELETE FROM entries WHERE id = ?').run(id);
+  // Soft-delete: set deleted_at instead of removing the row
+  db.prepare("UPDATE entries SET deleted_at = datetime('now'), updated_at = datetime('now') WHERE id = ?").run(id);
+  // Also soft-delete child comments and todos
+  db.prepare("UPDATE comments SET deleted_at = datetime('now'), updated_at = datetime('now') WHERE entry_id = ?").run(id);
+  db.prepare("UPDATE todos SET deleted_at = datetime('now'), updated_at = datetime('now') WHERE entry_id = ?").run(id);
   res.status(204).send();
 });
 
@@ -182,7 +186,7 @@ router.get('/:id/comments', (req, res) => {
     return;
   }
 
-  const entry = db.prepare('SELECT * FROM entries WHERE id = ?').get(entryId) as any;
+  const entry = db.prepare('SELECT * FROM entries WHERE id = ? AND deleted_at IS NULL').get(entryId) as any;
   if (!entry) {
     res.status(404).json({ error: 'Entry not found' });
     return;
@@ -194,7 +198,7 @@ router.get('/:id/comments', (req, res) => {
     return;
   }
 
-  const comments = db.prepare('SELECT * FROM comments WHERE entry_id = ? ORDER BY created_at ASC').all(entryId);
+  const comments = db.prepare('SELECT * FROM comments WHERE entry_id = ? AND deleted_at IS NULL ORDER BY created_at ASC').all(entryId);
   res.json(comments);
 });
 
@@ -206,7 +210,7 @@ router.post('/:id/comments', (req, res) => {
     return;
   }
 
-  const entry = db.prepare('SELECT * FROM entries WHERE id = ?').get(entryId) as any;
+  const entry = db.prepare('SELECT * FROM entries WHERE id = ? AND deleted_at IS NULL').get(entryId) as any;
   if (!entry) {
     res.status(404).json({ error: 'Entry not found' });
     return;
@@ -243,7 +247,7 @@ router.delete('/comments/:commentId', (req, res) => {
     return;
   }
 
-  const comment = db.prepare('SELECT * FROM comments WHERE id = ?').get(commentId) as any;
+  const comment = db.prepare('SELECT * FROM comments WHERE id = ? AND deleted_at IS NULL').get(commentId) as any;
   if (!comment) {
     res.status(404).json({ error: 'Comment not found' });
     return;
@@ -255,7 +259,7 @@ router.delete('/comments/:commentId', (req, res) => {
     return;
   }
 
-  db.prepare('DELETE FROM comments WHERE id = ?').run(commentId);
+  db.prepare("UPDATE comments SET deleted_at = datetime('now'), updated_at = datetime('now') WHERE id = ?").run(commentId);
   res.status(204).send();
 });
 
@@ -269,7 +273,7 @@ router.get('/:id/todos', (req, res) => {
     return;
   }
 
-  const entry = db.prepare('SELECT * FROM entries WHERE id = ?').get(entryId) as any;
+  const entry = db.prepare('SELECT * FROM entries WHERE id = ? AND deleted_at IS NULL').get(entryId) as any;
   if (!entry) {
     res.status(404).json({ error: 'Entry not found' });
     return;
@@ -281,7 +285,7 @@ router.get('/:id/todos', (req, res) => {
     return;
   }
 
-  const todos = db.prepare('SELECT * FROM todos WHERE entry_id = ? ORDER BY sort_order ASC, id ASC').all(entryId);
+  const todos = db.prepare('SELECT * FROM todos WHERE entry_id = ? AND deleted_at IS NULL ORDER BY sort_order ASC, id ASC').all(entryId);
   res.json(todos);
 });
 
@@ -293,7 +297,7 @@ router.post('/:id/todos', (req, res) => {
     return;
   }
 
-  const entry = db.prepare('SELECT * FROM entries WHERE id = ?').get(entryId) as any;
+  const entry = db.prepare('SELECT * FROM entries WHERE id = ? AND deleted_at IS NULL').get(entryId) as any;
   if (!entry) {
     res.status(404).json({ error: 'Entry not found' });
     return;
@@ -311,8 +315,8 @@ router.post('/:id/todos', (req, res) => {
     return;
   }
 
-  // Get max sort_order for this entry
-  const maxOrder = db.prepare('SELECT MAX(sort_order) as max FROM todos WHERE entry_id = ?').get(entryId) as any;
+  // Get max sort_order for this entry (only non-deleted todos)
+  const maxOrder = db.prepare('SELECT MAX(sort_order) as max FROM todos WHERE entry_id = ? AND deleted_at IS NULL').get(entryId) as any;
   const sortOrder = (maxOrder?.max ?? -1) + 1;
 
   const result = db.prepare(
@@ -331,14 +335,14 @@ router.put('/todos/:todoId', (req, res) => {
     return;
   }
 
-  const todo = db.prepare('SELECT * FROM todos WHERE id = ?').get(todoId) as any;
+  const todo = db.prepare('SELECT * FROM todos WHERE id = ? AND deleted_at IS NULL').get(todoId) as any;
   if (!todo) {
     res.status(404).json({ error: 'Todo not found' });
     return;
   }
 
   // Check entry access
-  const entry = db.prepare('SELECT * FROM entries WHERE id = ?').get(todo.entry_id) as any;
+  const entry = db.prepare('SELECT * FROM entries WHERE id = ? AND deleted_at IS NULL').get(todo.entry_id) as any;
   if (entry.is_private && entry.user_id !== req.user!.id) {
     res.status(403).json({ error: 'Forbidden - cannot modify todo on private entry' });
     return;
@@ -365,7 +369,7 @@ router.put('/todos/:todoId', (req, res) => {
   res.json(updatedTodo);
 });
 
-// DELETE /api/entries/todos/:todoId — delete a todo
+// DELETE /api/entries/todos/:todoId — soft-delete a todo
 router.delete('/todos/:todoId', (req, res) => {
   const todoId = parseInt(req.params.todoId, 10);
   if (isNaN(todoId)) {
@@ -373,20 +377,20 @@ router.delete('/todos/:todoId', (req, res) => {
     return;
   }
 
-  const todo = db.prepare('SELECT * FROM todos WHERE id = ?').get(todoId) as any;
+  const todo = db.prepare('SELECT * FROM todos WHERE id = ? AND deleted_at IS NULL').get(todoId) as any;
   if (!todo) {
     res.status(404).json({ error: 'Todo not found' });
     return;
   }
 
   // Check entry access
-  const entry = db.prepare('SELECT * FROM entries WHERE id = ?').get(todo.entry_id) as any;
+  const entry = db.prepare('SELECT * FROM entries WHERE id = ? AND deleted_at IS NULL').get(todo.entry_id) as any;
   if (entry.is_private && entry.user_id !== req.user!.id) {
     res.status(403).json({ error: 'Forbidden - cannot delete todo on private entry' });
     return;
   }
 
-  db.prepare('DELETE FROM todos WHERE id = ?').run(todoId);
+  db.prepare("UPDATE todos SET deleted_at = datetime('now'), updated_at = datetime('now') WHERE id = ?").run(todoId);
   res.status(204).send();
 });
 

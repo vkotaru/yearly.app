@@ -90,12 +90,33 @@ export async function flushPendingSync(): Promise<void> {
     });
 
     if (res.ok) {
-      // Server accepted all changes — clear the queue
-      const ids = pending.map(p => p.id!).filter(Boolean);
-      await db.pendingSync.bulkDelete(ids);
+      const result = await res.json();
+
+      // Only delete successfully synced entries (NOT bulk clear — real bug from askesis)
+      if (result.results) {
+        const successChangeIds = new Set(
+          result.results.filter((r: any) => r.success).map((r: any) => r.id)
+        );
+        const idsToDelete = pending
+          .filter(p => successChangeIds.has(p.id))
+          .map(p => p.id!)
+          .filter(Boolean);
+        if (idsToDelete.length > 0) {
+          await db.pendingSync.bulkDelete(idsToDelete);
+        }
+
+        // Increment retries on failed items
+        const failedRecords = pending.filter(p => !successChangeIds.has(p.id));
+        if (failedRecords.length > 0) {
+          await incrementRetries(failedRecords);
+        }
+      } else {
+        // Fallback: server didn't return per-item results — delete all
+        const ids = pending.map(p => p.id!).filter(Boolean);
+        await db.pendingSync.bulkDelete(ids);
+      }
 
       // Apply server-assigned IDs back to local records
-      const result = await res.json();
       if (result.idMappings) {
         await applyServerIdMappings(result.idMappings);
       }
