@@ -2,8 +2,10 @@ import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../../contexts/AuthContext';
 import styles from './Login.module.css';
 
+const isDev = import.meta.env.DEV;
+
 export default function Login() {
-  const { login } = useAuth();
+  const { login, devLogin } = useAuth();
 
   async function handleSuccess(credentialResponse: { credential?: string }) {
     if (!credentialResponse.credential) return;
@@ -20,6 +22,15 @@ export default function Login() {
     alert('Login failed. Please try again.');
   }
 
+  async function handleDevLogin() {
+    try {
+      await devLogin();
+    } catch (error) {
+      console.error('Dev login error:', error);
+      alert('Dev login failed.');
+    }
+  }
+
   return (
     <div className={styles.container}>
       <div className={styles.card}>
@@ -31,6 +42,11 @@ export default function Login() {
             onError={handleError}
             useOneTap={false}
           />
+          {isDev && (
+            <button className={styles.devButton} onClick={handleDevLogin}>
+              Dev Login (skip OAuth)
+            </button>
+          )}
         </div>
       </div>
     </div>

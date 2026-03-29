@@ -79,6 +79,33 @@ router.post('/google', async (req, res) => {
   }
 });
 
+// POST /api/auth/dev-login - Dev-only bypass (no Google)
+if (process.env.NODE_ENV !== 'production') {
+  router.post('/dev-login', (req, res) => {
+    // Upsert a fixed dev user
+    let user = db.prepare('SELECT * FROM users WHERE google_id = ?').get('dev-user') as User | undefined;
+
+    if (!user) {
+      const result = db.prepare(
+        'INSERT INTO users (google_id, email, name, picture) VALUES (?, ?, ?, ?)'
+      ).run('dev-user', 'dev@localhost', 'Dev User', '');
+      user = db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid) as User;
+    }
+
+    const token = createToken(user);
+
+    res.cookie('auth_token', token, {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    const response: AuthResponse = { user };
+    res.json(response);
+  });
+}
+
 // GET /api/auth/me - Get current user
 router.get('/me', requireAuth, (req, res) => {
   const response: AuthResponse = { user: req.user! };
