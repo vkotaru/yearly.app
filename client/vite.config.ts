@@ -7,7 +7,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'prompt',
-      includeAssets: ['icon.svg', 'apple-touch-icon-180x180.png'],
+      includeAssets: ['favicon.png', 'apple-touch-icon-180x180.png'],
       manifest: {
         name: 'Yearly Planner',
         short_name: 'Yearly',
