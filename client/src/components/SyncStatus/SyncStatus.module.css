@@ -1,13 +1,19 @@
+.wrapper {
+  position: relative;
+}
+
 .container {
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 4px 8px;
+  border: none;
   border-radius: var(--radius-md);
+  background: transparent;
   font-size: 11px;
   font-weight: 500;
+  font-family: inherit;
   color: rgba(255, 255, 255, 0.6);
-  cursor: default;
   user-select: none;
 }
 
@@ -34,8 +40,166 @@
   animation: pulse 1.5s ease-in-out infinite;
 }
 
+.error {
+  background: #ef4444;
+  box-shadow: 0 0 4px rgba(239, 68, 68, 0.5);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
 .pendingCount {
   font-variant-numeric: tabular-nums;
+}
+
+.failedCount {
+  color: #ef4444;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Detail panel ── */
+
+.detailPanel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 320px;
+  max-height: 400px;
+  background: var(--neutral-800, #1e1e1e);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md, 8px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.detailHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.detailClose {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.detailClose:hover {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.detailError {
+  padding: 8px 12px;
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+  font-size: 11px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.detailEmpty {
+  padding: 24px 12px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 12px;
+}
+
+.detailList {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.detailRow {
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.detailRowFailed {
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.detailRowTop {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.detailOp {
+  text-transform: uppercase;
+  font-weight: 600;
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.detailTable {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 11px;
+}
+
+.detailRetries {
+  margin-left: auto;
+  font-size: 10px;
+  color: #f59e0b;
+  font-weight: 500;
+}
+
+.detailRowFailed .detailRetries {
+  color: #ef4444;
+  font-weight: 700;
+}
+
+.detailRowMeta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 3px;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.detailTitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 180px;
+}
+
+.detailTime {
+  flex-shrink: 0;
+}
+
+/* Retry button inside panel */
+.retryButton {
+  margin: 8px 12px;
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-sm, 4px);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.retryButton:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
 }
 
 /* Conflict toast */
@@ -60,6 +224,11 @@
   50% { opacity: 0.4; }
 }
 
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 @keyframes slideUp {
   from {
     opacity: 0;
@@ -79,5 +248,16 @@
   .container {
     padding: 4px;
     gap: 4px;
+  }
+
+  .detailPanel {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-height: 60vh;
+    border-radius: var(--radius-md, 8px) var(--radius-md, 8px) 0 0;
   }
 }

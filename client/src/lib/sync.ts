@@ -3,16 +3,42 @@
  *
  * Write path:  Component → Dexie → pendingSync queue → server (when online)
  * Read path:   Component ← Dexie (instant) ← server (background refresh)
- *
- * The sync endpoints (GET /api/sync/changes, POST /api/sync/push) are a
- * separate backend task. This module calls them with graceful fallback
- * when they don't exist yet (404 → skip sync, no error).
  */
 
 import { db, type PendingSyncRecord, type SyncOperation } from './db';
 
 const SYNC_TAG = 'yearly-sync';
 const LAST_SYNC_KEY = 'yearly-last-sync';
+const MAX_RETRIES = 10;
+
+// ── Sync error state ──
+
+export type SyncErrorState = {
+  type: 'network' | 'server' | 'failed-records';
+  message: string;
+  failedCount?: number;
+} | null;
+
+let _syncError: SyncErrorState = null;
+const _syncErrorListeners = new Set<(error: SyncErrorState) => void>();
+
+export function getSyncError(): SyncErrorState {
+  return _syncError;
+}
+
+export function onSyncErrorChange(fn: (error: SyncErrorState) => void): () => void {
+  _syncErrorListeners.add(fn);
+  return () => _syncErrorListeners.delete(fn);
+}
+
+function setSyncError(error: SyncErrorState): void {
+  _syncError = error;
+  _syncErrorListeners.forEach(fn => fn(error));
+}
+
+function clearSyncError(): void {
+  if (_syncError) setSyncError(null);
+}
 
 // ── Online/offline state ──
 
@@ -78,7 +104,10 @@ export async function getPendingSyncCount(): Promise<number> {
 export async function flushPendingSync(): Promise<void> {
   if (!_online) return;
 
-  const pending = await db.pendingSync.orderBy('timestamp').toArray();
+  const pending = await db.pendingSync
+    .orderBy('timestamp')
+    .filter(r => r.retries < MAX_RETRIES)
+    .toArray();
   if (pending.length === 0) return;
 
   try {
@@ -120,25 +149,37 @@ export async function flushPendingSync(): Promise<void> {
       if (result.idMappings) {
         await applyServerIdMappings(result.idMappings);
       }
+
+      clearSyncError();
     } else if (res.status === 404) {
-      // Sync endpoint not implemented yet — silently skip
+      setSyncError({
+        type: 'server',
+        message: 'Sync endpoint not available — changes are saved locally',
+      });
       return;
     } else if (res.status === 409) {
       // Conflict — server-wins strategy
       const result = await res.json();
       if (result.resolved) {
-        // Server resolved conflicts, apply the server's version
         await applyServerChanges(result.resolved);
-        // Remove the conflicting records from pending
         const ids = pending.map(p => p.id!).filter(Boolean);
         await db.pendingSync.bulkDelete(ids);
       }
+      window.dispatchEvent(new CustomEvent('sync-conflict', {
+        detail: { message: 'Server updated — your changes were overwritten' },
+      }));
     } else {
-      // Other error — increment retries on all pending records
+      setSyncError({
+        type: 'server',
+        message: `Sync failed (${res.status}) — will retry`,
+      });
       await incrementRetries(pending);
     }
-  } catch {
-    // Network error — records stay in queue for next attempt
+  } catch (err) {
+    setSyncError({
+      type: 'network',
+      message: 'Network error — changes saved locally, will retry when connected',
+    });
   }
 }
 
@@ -158,7 +199,12 @@ export async function pullChanges(): Promise<Set<number>> {
     });
 
     if (!res.ok) {
-      if (res.status === 404) return affectedMonths; // Endpoint not ready
+      if (res.status !== 404) {
+        setSyncError({
+          type: 'server',
+          message: `Failed to pull changes (${res.status})`,
+        });
+      }
       return affectedMonths;
     }
 
@@ -180,8 +226,12 @@ export async function pullChanges(): Promise<Set<number>> {
     }
 
     localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
+    clearSyncError();
   } catch {
-    // Network error — continue with local data
+    setSyncError({
+      type: 'network',
+      message: 'Could not reach server — using local data',
+    });
   }
 
   return affectedMonths;
@@ -300,17 +350,45 @@ async function applyServerTodos(
 }
 
 async function incrementRetries(records: PendingSyncRecord[]): Promise<void> {
-  const MAX_RETRIES = 10;
+  let failedCount = 0;
   for (const record of records) {
     if (record.id) {
-      if (record.retries >= MAX_RETRIES) {
-        // Give up on this record
-        await db.pendingSync.delete(record.id);
-      } else {
-        await db.pendingSync.update(record.id, { retries: record.retries + 1 });
+      const newRetries = record.retries + 1;
+      await db.pendingSync.update(record.id, { retries: newRetries });
+      if (newRetries >= MAX_RETRIES) {
+        failedCount++;
       }
     }
   }
+  if (failedCount > 0) {
+    setSyncError({
+      type: 'failed-records',
+      message: `${failedCount} change${failedCount > 1 ? 's' : ''} failed to sync after ${MAX_RETRIES} attempts`,
+      failedCount,
+    });
+  }
+}
+
+/** Count records that have exhausted retries */
+export async function getFailedSyncCount(): Promise<number> {
+  return db.pendingSync.where('retries').aboveOrEqual(MAX_RETRIES).count();
+}
+
+/** Get all failed records for debugging UI */
+export async function getFailedSyncRecords(): Promise<PendingSyncRecord[]> {
+  return db.pendingSync.where('retries').aboveOrEqual(MAX_RETRIES).toArray();
+}
+
+/** Get all pending records (including failed) for debugging UI */
+export async function getAllPendingSyncRecords(): Promise<PendingSyncRecord[]> {
+  return db.pendingSync.orderBy('timestamp').toArray();
+}
+
+/** Retry all failed records by resetting their retry count */
+export async function retryFailedSync(): Promise<void> {
+  await db.pendingSync.where('retries').aboveOrEqual(MAX_RETRIES).modify({ retries: 0 });
+  clearSyncError();
+  flushPendingSync();
 }
 
 function registerBackgroundSync(): void {
