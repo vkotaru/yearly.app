@@ -106,6 +106,36 @@ export default function YearGridView({ year }: Props) {
     return d + day;
   }, [year]);
 
+  // Total days in the current year
+  const totalDaysInYear = useMemo(() => {
+    let d = 0;
+    for (let m = 1; m <= 12; m++) d += getDaysInMonth(year, m);
+    return d;
+  }, [year]);
+
+  // Convert a day-of-year index back to (month, day)
+  const doyToMonthDay = useCallback((doy: number): { month: number; day: number } => {
+    const clamped = Math.max(1, Math.min(doy, totalDaysInYear));
+    let remaining = clamped;
+    for (let m = 1; m <= 12; m++) {
+      const days = getDaysInMonth(year, m);
+      if (remaining <= days) return { month: m, day: remaining };
+      remaining -= days;
+    }
+    return { month: 12, day: getDaysInMonth(year, 12) };
+  }, [year, totalDaysInYear]);
+
+  // Clamp a move's starting position so the span (days-after-start) never
+  // pushes the end past Dec 31.
+  const clampStartToYear = useCallback((
+    month: number, day: number, span: number,
+  ): { month: number; day: number } => {
+    const maxStartDoy = Math.max(1, totalDaysInYear - span);
+    const startDoy = dayOfYear(month, day);
+    if (startDoy <= maxStartDoy) return { month, day };
+    return doyToMonthDay(maxStartDoy);
+  }, [dayOfYear, doyToMonthDay, totalDaysInYear]);
+
   // True if ranges [aStart..aEnd] and [bStart..bEnd] (inclusive, day-of-year) overlap
   const rangesOverlap = useCallback((
     aStartM: number, aStartD: number, aEndM: number, aEndD: number,
@@ -181,21 +211,22 @@ export default function YearGridView({ year }: Props) {
       if (isMoving.current && move) {
         isMoving.current = false;
         moveIntent.current = null;
-        const newDayStart = move.currentDayStart;
-        let newMonth = move.currentMonth;
-        let newDayEnd = newDayStart + move.span;
-        const newRowIndex = move.currentRowIndex;
         const movingEntry = move.entry;
 
-        // Calculate end_month if entry spans past month boundary
-        let newEndMonth = newMonth;
-        let maxDay = getDaysInMonth(year, newMonth);
-        while (newDayEnd > maxDay && newEndMonth < 12) {
-          newDayEnd = newDayEnd - maxDay;
-          newEndMonth++;
-          maxDay = getDaysInMonth(year, newEndMonth);
-        }
-        newDayEnd = Math.min(newDayEnd, maxDay);
+        // Re-clamp to year in case state slipped past; this also hardens
+        // against any future caller that leaves currentDayStart past the
+        // year boundary.
+        const clampedStart = clampStartToYear(
+          move.currentMonth, move.currentDayStart, move.span
+        );
+        const newMonth = clampedStart.month;
+        const newDayStart = clampedStart.day;
+        const newRowIndex = move.currentRowIndex;
+
+        // Convert start + span back to (end_month, end_day) via day-of-year.
+        const endPos = doyToMonthDay(dayOfYear(newMonth, newDayStart) + move.span);
+        const newEndMonth = endPos.month;
+        const newDayEnd = endPos.day;
 
         const positionChanged =
           newDayStart !== movingEntry.day_start ||
@@ -298,7 +329,7 @@ export default function YearGridView({ year }: Props) {
     }
     window.addEventListener('mouseup', handleMouseUp);
     return () => window.removeEventListener('mouseup', handleMouseUp);
-  }, [drag, resize, move, hasRowConflict, findFreeRow, updateExistingEntry, year]);
+  }, [drag, resize, move, hasRowConflict, findFreeRow, clampStartToYear, dayOfYear, doyToMonthDay, updateExistingEntry, year]);
 
   // Global mousemove during resize
   useEffect(() => {
@@ -434,16 +465,19 @@ export default function YearGridView({ year }: Props) {
 
       const clampedStart = Math.max(1, Math.min(newDayStart, maxDay));
 
+      // Don't let the span overflow Dec 31
+      const capped = clampStartToYear(targetMonth, clampedStart, move.span);
+
       setMove(prev => prev ? {
         ...prev,
-        currentDayStart: clampedStart,
-        currentMonth: targetMonth,
+        currentDayStart: capped.day,
+        currentMonth: capped.month,
         currentRowIndex: targetRowIndex,
       } : null);
     }
     window.addEventListener('mousemove', handleMouseMove);
     return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, [move, year, monthOffsets, dayWidth, rowHeight]);
+  }, [move, year, monthOffsets, dayWidth, rowHeight, clampStartToYear]);
 
   function handleEntryMouseDown(entry: Entry, clientX: number) {
     moveIntent.current = { entry, startX: clientX };
