@@ -94,8 +94,13 @@ export default function EntryEditor({
 }: Props) {
   const { settings, updateSettings } = useSettings();
   const backgroundCategories = settings.backgroundCategories || [];
-  const isCrossMonth = endMonth !== undefined && endMonth !== month;
-  const maxDay = getDaysInMonth(year, month);
+  const [mStart, setMStart] = useState<number>(existingEntry?.month ?? month);
+  const [mEnd, setMEnd] = useState<number>(
+    existingEntry?.end_month ?? existingEntry?.month ?? endMonth ?? month
+  );
+  const isCrossMonth = mStart !== mEnd;
+  const maxDayStart = getDaysInMonth(year, mStart);
+  const maxDayEnd = getDaysInMonth(year, mEnd);
   const [title, setTitle] = useState(existingEntry?.title ?? '');
   const [description, setDescription] = useState(existingEntry?.description ?? '');
   const [url, setUrl] = useState(existingEntry?.url ?? '');
@@ -181,64 +186,45 @@ export default function EntryEditor({
   }
 
   function handleSave() {
-    const start = Math.min(dStart, dEnd);
-    const end = Math.max(dStart, dEnd);
+    // Normalize ordering: compare (month, day) lexicographically
+    let startMonth = mStart;
+    let startDay = dStart;
+    let endMonthFinal = mEnd;
+    let endDay = dEnd;
+    if (endMonthFinal < startMonth || (endMonthFinal === startMonth && endDay < startDay)) {
+      [startMonth, endMonthFinal] = [endMonthFinal, startMonth];
+      [startDay, endDay] = [endDay, startDay];
+    }
+    const base = {
+      title,
+      description,
+      url,
+      category,
+      emoji,
+      departure_time: departureTime,
+      arrival_time: arrivalTime,
+      color,
+      is_private: isPrivate,
+      is_tentative: isTentative,
+    };
     if (existingEntry) {
-      // Update existing entry
       onSave({
         id: existingEntry.id,
-        title,
-        description,
-        url,
-        category,
-        emoji,
-        departure_time: departureTime,
-        arrival_time: arrivalTime,
-        color,
-        day_start: start,
-        day_end: end,
-        end_month: isCrossMonth && endMonth ? endMonth : existingEntry.end_month,
-        is_private: isPrivate,
-        is_tentative: isTentative,
-      });
-    } else if (isCrossMonth && endMonth) {
-      // Create single entry with end_month for cross-month selection
-      onSave({
-        year,
-        month,
-        end_month: endMonth,
-        day_start: dayStart,
-        day_end: dayEnd,
-        row_index: rowIndex,
-        title,
-        description,
-        url,
-        category,
-        emoji,
-        departure_time: departureTime,
-        arrival_time: arrivalTime,
-        color,
-        is_private: isPrivate,
-        is_tentative: isTentative,
+        ...base,
+        month: startMonth,
+        end_month: endMonthFinal,
+        day_start: startDay,
+        day_end: endDay,
       });
     } else {
-      // Create single-month entry
       onSave({
         year,
-        month,
-        day_start: start,
-        day_end: end,
+        month: startMonth,
+        end_month: endMonthFinal,
+        day_start: startDay,
+        day_end: endDay,
         row_index: rowIndex,
-        title,
-        description,
-        url,
-        category,
-        emoji,
-        departure_time: departureTime,
-        arrival_time: arrivalTime,
-        color,
-        is_private: isPrivate,
-        is_tentative: isTentative,
+        ...base,
       });
     }
   }
@@ -281,10 +267,34 @@ export default function EntryEditor({
   }
 
   const spanLabel = isCrossMonth
-    ? `${getMonthName(month)} ${dayStart} – ${getMonthName(endMonth!)} ${dayEnd}`
+    ? `${getMonthName(mStart)} ${dStart} – ${getMonthName(mEnd)} ${dEnd}`
     : dStart === dEnd
-      ? `${getMonthName(month)} ${dStart}`
-      : `${getMonthName(month)} ${dStart} – ${dEnd}`;
+      ? `${getMonthName(mStart)} ${dStart}`
+      : `${getMonthName(mStart)} ${dStart} – ${dEnd}`;
+
+  const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
+
+  function handleStartMonthChange(next: number) {
+    setMStart(next);
+    const cap = getDaysInMonth(year, next);
+    if (dStart > cap) setDStart(cap);
+    if (next > mEnd) {
+      setMEnd(next);
+      const capEnd = getDaysInMonth(year, next);
+      if (dEnd > capEnd) setDEnd(capEnd);
+    }
+  }
+
+  function handleEndMonthChange(next: number) {
+    setMEnd(next);
+    const cap = getDaysInMonth(year, next);
+    if (dEnd > cap) setDEnd(cap);
+    if (next < mStart) {
+      setMStart(next);
+      const capStart = getDaysInMonth(year, next);
+      if (dStart > capStart) setDStart(capStart);
+    }
+  }
 
   // Render modal at document.body level via portal to avoid overflow:hidden issues
   return createPortal(
@@ -378,23 +388,43 @@ export default function EntryEditor({
         <div className={styles.rangeRow}>
           <label className={styles.field}>
             <span>From</span>
-            <input
-              type="number"
-              min={1}
-              max={maxDay}
-              value={dStart}
-              onChange={(e) => setDStart(Math.min(Number(e.target.value), maxDay))}
-            />
+            <div style={{ display: 'flex', gap: '4px' }}>
+              <select
+                value={mStart}
+                onChange={(e) => handleStartMonthChange(Number(e.target.value))}
+              >
+                {MONTHS.map(m => (
+                  <option key={m} value={m}>{getMonthName(m)}</option>
+                ))}
+              </select>
+              <input
+                type="number"
+                min={1}
+                max={maxDayStart}
+                value={dStart}
+                onChange={(e) => setDStart(Math.min(Math.max(1, Number(e.target.value)), maxDayStart))}
+              />
+            </div>
           </label>
           <label className={styles.field}>
             <span>To</span>
-            <input
-              type="number"
-              min={1}
-              max={maxDay}
-              value={dEnd}
-              onChange={(e) => setDEnd(Math.min(Number(e.target.value), maxDay))}
-            />
+            <div style={{ display: 'flex', gap: '4px' }}>
+              <select
+                value={mEnd}
+                onChange={(e) => handleEndMonthChange(Number(e.target.value))}
+              >
+                {MONTHS.map(m => (
+                  <option key={m} value={m}>{getMonthName(m)}</option>
+                ))}
+              </select>
+              <input
+                type="number"
+                min={1}
+                max={maxDayEnd}
+                value={dEnd}
+                onChange={(e) => setDEnd(Math.min(Math.max(1, Number(e.target.value)), maxDayEnd))}
+              />
+            </div>
           </label>
         </div>
 

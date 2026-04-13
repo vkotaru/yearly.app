@@ -59,9 +59,13 @@ export default function EntryDetailPanel({ entry, onClose, onEdit }: Props) {
   }, [onClose]);
 
   const completedCount = todos.filter(t => t.completed).length;
-  const dateLabel = entry.day_start === entry.day_end
-    ? `${getMonthName(entry.month)} ${entry.day_start}`
-    : `${getMonthName(entry.month)} ${entry.day_start} – ${entry.day_end}`;
+  const endMonth = entry.end_month ?? entry.month;
+  const isCrossMonth = endMonth !== entry.month;
+  const dateLabel = isCrossMonth
+    ? `${getMonthName(entry.month)} ${entry.day_start} – ${getMonthName(endMonth)} ${entry.day_end}`
+    : entry.day_start === entry.day_end
+      ? `${getMonthName(entry.month)} ${entry.day_start}`
+      : `${getMonthName(entry.month)} ${entry.day_start} – ${entry.day_end}`;
 
   // Render at document.body level via portal to avoid overflow:hidden issues
   return createPortal(
