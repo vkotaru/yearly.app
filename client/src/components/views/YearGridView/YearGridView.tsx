@@ -98,6 +98,63 @@ export default function YearGridView({ year }: Props) {
     return calculateMonthOffsets(monthRows, entriesByMonth, rowHeight);
   }, [monthRows, entriesByMonth, rowHeight]);
 
+  // Convert (month, day) in the current year to a linear day-of-year index
+  const dayOfYear = useCallback((month: number, day: number): number => {
+    let d = 0;
+    for (let m = 1; m < month; m++) d += getDaysInMonth(year, m);
+    return d + day;
+  }, [year]);
+
+  // True if ranges [aStart..aEnd] and [bStart..bEnd] (inclusive, day-of-year) overlap
+  const rangesOverlap = useCallback((
+    aStartM: number, aStartD: number, aEndM: number, aEndD: number,
+    bStartM: number, bStartD: number, bEndM: number, bEndD: number,
+  ): boolean => {
+    const aStart = dayOfYear(aStartM, aStartD);
+    const aEnd = dayOfYear(aEndM, aEndD);
+    const bStart = dayOfYear(bStartM, bStartD);
+    const bEnd = dayOfYear(bEndM, bEndD);
+    return !(aEnd < bStart || aStart > bEnd);
+  }, [dayOfYear]);
+
+  // Is a row_index in conflict with any other entry that overlaps the given span?
+  // Considers full cross-month spans of both the candidate and existing entries.
+  const hasRowConflict = useCallback((
+    span: { startMonth: number; startDay: number; endMonth: number; endDay: number; rowIndex: number },
+    excludeId: number,
+  ): boolean => {
+    return entries.some(e => {
+      if (e.id === excludeId) return false;
+      if (e.row_index !== span.rowIndex) return false;
+      const eEndM = e.end_month ?? e.month;
+      return rangesOverlap(
+        span.startMonth, span.startDay, span.endMonth, span.endDay,
+        e.month, e.day_start, eEndM, e.day_end,
+      );
+    });
+  }, [entries, rangesOverlap]);
+
+  // Find the lowest row_index free across every month the span touches
+  const findFreeRow = useCallback((
+    span: { startMonth: number; startDay: number; endMonth: number; endDay: number },
+    excludeId: number,
+  ): number => {
+    const used = new Set<number>();
+    for (const e of entries) {
+      if (e.id === excludeId) continue;
+      const eEndM = e.end_month ?? e.month;
+      if (rangesOverlap(
+        span.startMonth, span.startDay, span.endMonth, span.endDay,
+        e.month, e.day_start, eEndM, e.day_end,
+      )) {
+        used.add(e.row_index);
+      }
+    }
+    let r = 0;
+    while (used.has(r)) r++;
+    return r;
+  }, [entries, rangesOverlap]);
+
   // Calculate row counts per month
   const monthRowCounts = useMemo(() => {
     const counts: Record<number, number> = {};
@@ -146,41 +203,24 @@ export default function YearGridView({ year }: Props) {
           newRowIndex !== movingEntry.row_index;
 
         if (positionChanged) {
-          const monthEntries = entriesByMonth[newMonth] || [];
-          const effectiveDayEnd = newEndMonth === newMonth ? newDayEnd : maxDay;
-          const hasConflict = monthEntries.some(e => {
-            if (e.id === movingEntry.id) return false;
-            if (e.row_index !== newRowIndex) return false;
-            return !(effectiveDayEnd < e.day_start || newDayStart > e.day_end);
+          const span = {
+            startMonth: newMonth,
+            startDay: newDayStart,
+            endMonth: newEndMonth,
+            endDay: newDayEnd,
+            rowIndex: newRowIndex,
+          };
+          const rowIndex = hasRowConflict(span, movingEntry.id)
+            ? findFreeRow(span, movingEntry.id)
+            : newRowIndex;
+
+          await updateExistingEntry(movingEntry.id, {
+            month: newMonth,
+            end_month: newEndMonth,
+            day_start: newDayStart,
+            day_end: newDayEnd,
+            row_index: rowIndex,
           });
-
-          if (hasConflict) {
-            const usedRows = new Set<number>();
-            for (const e of monthEntries) {
-              if (e.id === movingEntry.id) continue;
-              if (!(effectiveDayEnd < e.day_start || newDayStart > e.day_end)) {
-                usedRows.add(e.row_index);
-              }
-            }
-            let freeRow = 0;
-            while (usedRows.has(freeRow)) freeRow++;
-
-            await updateExistingEntry(movingEntry.id, {
-              month: newMonth,
-              end_month: newEndMonth,
-              day_start: newDayStart,
-              day_end: newDayEnd,
-              row_index: freeRow,
-            });
-          } else {
-            await updateExistingEntry(movingEntry.id, {
-              month: newMonth,
-              end_month: newEndMonth,
-              day_start: newDayStart,
-              day_end: newDayEnd,
-              row_index: newRowIndex,
-            });
-          }
         }
         setMove(null);
         return;
@@ -206,24 +246,15 @@ export default function YearGridView({ year }: Props) {
           newEndMonth !== resize.originalEndMonth;
 
         if (changed) {
-          const monthEntries = entriesByMonth[resizingEntry.month] || [];
-          const hasConflict = monthEntries.some(e => {
-            if (e.id === resizingEntry.id) return false;
-            if (e.row_index !== resizingEntry.row_index) return false;
-            return !(newDayEnd < e.day_start || resizingEntry.day_start > e.day_end);
-          });
-
-          if (hasConflict) {
-            const usedRows = new Set<number>();
-            for (const e of monthEntries) {
-              if (e.id === resizingEntry.id) continue;
-              if (!(newDayEnd < e.day_start || resizingEntry.day_start > e.day_end)) {
-                usedRows.add(e.row_index);
-              }
-            }
-            let freeRow = 0;
-            while (usedRows.has(freeRow)) freeRow++;
-
+          const span = {
+            startMonth: resizingEntry.month,
+            startDay: resizingEntry.day_start,
+            endMonth: newEndMonth,
+            endDay: newDayEnd,
+            rowIndex: resizingEntry.row_index,
+          };
+          if (hasRowConflict(span, resizingEntry.id)) {
+            const freeRow = findFreeRow(span, resizingEntry.id);
             await updateExistingEntry(resizingEntry.id, {
               day_end: newDayEnd,
               end_month: newEndMonth,
@@ -266,7 +297,7 @@ export default function YearGridView({ year }: Props) {
     }
     window.addEventListener('mouseup', handleMouseUp);
     return () => window.removeEventListener('mouseup', handleMouseUp);
-  }, [drag, resize, move, entriesByMonth, updateExistingEntry, year]);
+  }, [drag, resize, move, hasRowConflict, findFreeRow, updateExistingEntry, year]);
 
   // Global mousemove during resize
   useEffect(() => {
