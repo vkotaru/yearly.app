@@ -277,30 +277,43 @@ export default function YearGridView({ year }: Props) {
       const xInGrid = e.clientX - gridRect.left - GRID.MONTH_LABEL_WIDTH;
       if (xInGrid < 0) return;
 
-      const day = Math.floor(xInGrid / dayWidth) + 1;
-      const currentMonth = resize.entry.month;
-      const maxDay = getDaysInMonth(year, currentMonth);
+      const dayCol = Math.floor(xInGrid / dayWidth) + 1;
+      const startMonth = resize.entry.month;
 
-      if (day > maxDay && currentMonth < 12) {
-        const nextMonth = currentMonth + 1;
-        const dayInNextMonth = Math.min(day - maxDay, getDaysInMonth(year, nextMonth));
-        setResize(prev => prev ? {
-          ...prev,
-          currentDayEnd: dayInNextMonth,
-          currentEndMonth: nextMonth,
-        } : null);
-      } else {
-        const clampedDay = Math.max(resize.entry.day_start, Math.min(day, maxDay));
-        setResize(prev => prev ? {
-          ...prev,
-          currentDayEnd: clampedDay,
-          currentEndMonth: currentMonth,
-        } : null);
+      // Determine which month row the cursor is over (supports cross-month drag)
+      const yInGrid = e.clientY - gridRect.top;
+      let hoveredMonth = resize.currentEndMonth;
+      for (let i = 0; i < monthOffsets.length; i++) {
+        const current = monthOffsets[i];
+        const nextYOffset = i < monthOffsets.length - 1
+          ? monthOffsets[i + 1].yOffset
+          : current.yOffset + current.rowCount * rowHeight;
+        if (yInGrid >= current.yOffset && yInGrid < nextYOffset) {
+          hoveredMonth = current.month;
+          break;
+        }
       }
+
+      // End cannot be earlier than start
+      if (hoveredMonth < startMonth) {
+        hoveredMonth = startMonth;
+      }
+
+      const maxDay = getDaysInMonth(year, hoveredMonth);
+      let newDay = Math.max(1, Math.min(dayCol, maxDay));
+      if (hoveredMonth === startMonth) {
+        newDay = Math.max(newDay, resize.entry.day_start);
+      }
+
+      setResize(prev => prev ? {
+        ...prev,
+        currentDayEnd: newDay,
+        currentEndMonth: hoveredMonth,
+      } : null);
     }
     window.addEventListener('mousemove', handleMouseMove);
     return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, [resize, year, dayWidth]);
+  }, [resize, year, dayWidth, monthOffsets, rowHeight]);
 
   // Detect move threshold
   useEffect(() => {
