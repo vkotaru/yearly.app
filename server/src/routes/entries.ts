@@ -16,6 +16,33 @@ function isValidUrl(url: string | undefined | null): boolean {
   }
 }
 
+// Range validation for month/day fields. Returns an error message or null.
+function validateRanges(fields: {
+  month?: number | null;
+  end_month?: number | null;
+  day_start?: number | null;
+  day_end?: number | null;
+  row_index?: number | null;
+}): string | null {
+  const { month, end_month, day_start, day_end, row_index } = fields;
+  if (month != null && (!Number.isInteger(month) || month < 1 || month > 12)) {
+    return 'month must be an integer between 1 and 12';
+  }
+  if (end_month != null && (!Number.isInteger(end_month) || end_month < 1 || end_month > 12)) {
+    return 'end_month must be an integer between 1 and 12';
+  }
+  if (day_start != null && (!Number.isInteger(day_start) || day_start < 1 || day_start > 31)) {
+    return 'day_start must be an integer between 1 and 31';
+  }
+  if (day_end != null && (!Number.isInteger(day_end) || day_end < 1 || day_end > 31)) {
+    return 'day_end must be an integer between 1 and 31';
+  }
+  if (row_index != null && (!Number.isInteger(row_index) || row_index < 0)) {
+    return 'row_index must be a non-negative integer';
+  }
+  return null;
+}
+
 // Apply auth middleware to all routes
 router.use(requireAuth);
 
@@ -46,6 +73,17 @@ router.post('/', (req, res) => {
 
   if (!year || !month || !day_start || !day_end || row_index == null) {
     res.status(400).json({ error: 'Missing required fields: year, month, day_start, day_end, row_index' });
+    return;
+  }
+
+  if (!Number.isInteger(year) || year < 1970 || year > 9999) {
+    res.status(400).json({ error: 'year must be a valid integer' });
+    return;
+  }
+
+  const rangeError = validateRanges({ month, end_month, day_start, day_end, row_index });
+  if (rangeError) {
+    res.status(400).json({ error: rangeError });
     return;
   }
 
@@ -112,6 +150,27 @@ router.put('/:id', (req, res) => {
   // Validate URL if provided
   if (body.url !== undefined && !isValidUrl(body.url)) {
     res.status(400).json({ error: 'Invalid URL: must be http:// or https://' });
+    return;
+  }
+
+  // Validate month/day/row ranges on any provided fields
+  const rangeError = validateRanges({
+    month: body.month,
+    end_month: body.end_month,
+    day_start: body.day_start,
+    day_end: body.day_end,
+    row_index: body.row_index,
+  });
+  if (rangeError) {
+    res.status(400).json({ error: rangeError });
+    return;
+  }
+
+  // Cross-month ordering check, using new values when provided, otherwise existing
+  const effMonth = body.month ?? existing.month;
+  const effEndMonth = body.end_month ?? existing.end_month ?? effMonth;
+  if (effEndMonth < effMonth) {
+    res.status(400).json({ error: 'end_month must be >= month' });
     return;
   }
 
