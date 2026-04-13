@@ -6,6 +6,7 @@ import { useEntries } from '../../../contexts/EntriesContext';
 import {
   calculateMonthOffsets,
   calculateCrossMonthSegments,
+  computeRowCountsByMonth,
   GRID,
 } from '../../../utils/entryPosition';
 import MonthRow from '../../MonthRow/MonthRow';
@@ -46,7 +47,7 @@ interface Props {
 }
 
 export default function YearGridView({ year }: Props) {
-  const { entries, entriesByMonth, activeCategory, saveEntries, deleteExistingEntry, updateExistingEntry } = useEntries();
+  const { entries, activeCategory, saveEntries, deleteExistingEntry, updateExistingEntry } = useEntries();
 
   const [monthRows, setMonthRows] = useState<Record<number, number>>(
     () => Object.fromEntries(Array.from({ length: 12 }, (_, i) => [i + 1, 3]))
@@ -94,10 +95,18 @@ export default function YearGridView({ year }: Props) {
     return () => observer.disconnect();
   }, []);
 
+  // Row counts per month — accounts for cross-month entries so a high
+  // row_index in the start month also expands the continuation month(s).
+  const monthRowCounts = useMemo(
+    () => computeRowCountsByMonth(entries, monthRows),
+    [entries, monthRows],
+  );
+
   // Calculate month offsets for absolute positioning
-  const monthOffsets = useMemo(() => {
-    return calculateMonthOffsets(monthRows, entriesByMonth, rowHeight);
-  }, [monthRows, entriesByMonth, rowHeight]);
+  const monthOffsets = useMemo(
+    () => calculateMonthOffsets(monthRowCounts, rowHeight),
+    [monthRowCounts, rowHeight],
+  );
 
   // Convert (month, day) in the current year to a linear day-of-year index
   const dayOfYear = useCallback((month: number, day: number): number => {
@@ -185,18 +194,6 @@ export default function YearGridView({ year }: Props) {
     while (used.has(r)) r++;
     return r;
   }, [entries, rangesOverlap]);
-
-  // Calculate row counts per month
-  const monthRowCounts = useMemo(() => {
-    const counts: Record<number, number> = {};
-    for (let m = 1; m <= 12; m++) {
-      const minRows = monthRows[m] || 3;
-      const mEntries = entriesByMonth[m] || [];
-      const maxRowIndex = mEntries.reduce((max, e) => Math.max(max, e.row_index), minRows - 1);
-      counts[m] = maxRowIndex + 1;
-    }
-    return counts;
-  }, [monthRows, entriesByMonth]);
 
   // Filter entries by active category
   const filteredEntryIds = useMemo(() => {

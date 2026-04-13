@@ -7,6 +7,7 @@ import { useSettings, computeDayWidth } from '../../contexts/SettingsContext';
 import type { HistoryAction } from '../../types/history';
 import {
   calculateMonthOffsets,
+  computeRowCountsByMonth,
   GRID,
 } from '../../utils/entryPosition';
 import MonthRow from '../MonthRow/MonthRow';
@@ -231,22 +232,17 @@ export default function YearGrid({ year }: Props) {
     }, {});
   }, [entries]);
 
-  // Calculate month offsets for absolute positioning
-  const monthOffsets = useMemo(() => {
-    return calculateMonthOffsets(monthRows, entriesByMonth, rowHeight);
-  }, [monthRows, entriesByMonth, rowHeight]);
+  // Row counts per month — accounts for cross-month entries
+  const monthRowCounts = useMemo(
+    () => computeRowCountsByMonth(entries, monthRows),
+    [entries, monthRows],
+  );
 
-  // Calculate row counts per month
-  const monthRowCounts = useMemo(() => {
-    const counts: Record<number, number> = {};
-    for (let m = 1; m <= 12; m++) {
-      const minRows = monthRows[m] || 3;
-      const mEntries = entriesByMonth[m] || [];
-      const maxRowIndex = mEntries.reduce((max, e) => Math.max(max, e.row_index), minRows - 1);
-      counts[m] = maxRowIndex + 1;
-    }
-    return counts;
-  }, [monthRows, entriesByMonth]);
+  // Calculate month offsets for absolute positioning
+  const monthOffsets = useMemo(
+    () => calculateMonthOffsets(monthRowCounts, rowHeight),
+    [monthRowCounts, rowHeight],
+  );
 
   // Global mouseup to finish drag, resize, or move
   useEffect(() => {

@@ -18,23 +18,43 @@ export interface MonthRowInfo {
 }
 
 /**
+ * Compute the row count for each month, considering that a cross-month entry
+ * occupies its row_index in every month it touches — not just the start month.
+ * Without this, a cross-month entry pushed to a high row_index during conflict
+ * resolution would not expand the continuation month's layout, and its tail
+ * segment would render into the next month's vertical space.
+ */
+export function computeRowCountsByMonth(
+  entries: Entry[],
+  monthRows: Record<number, number>,
+): Record<number, number> {
+  const counts: Record<number, number> = {};
+  for (let m = 1; m <= 12; m++) {
+    counts[m] = monthRows[m] || 3;
+  }
+  for (const e of entries) {
+    const endMonth = e.end_month ?? e.month;
+    const needed = e.row_index + 1;
+    for (let m = e.month; m <= endMonth; m++) {
+      if (needed > counts[m]) counts[m] = needed;
+    }
+  }
+  return counts;
+}
+
+/**
  * Calculate the cumulative Y offset for each month based on row counts.
  * This is needed for positioning entries as absolute overlays.
  */
 export function calculateMonthOffsets(
-  monthRows: Record<number, number>,
-  entriesByMonth: Record<number, Entry[]>,
-  rowHeight: number = GRID.DEFAULT_ROW_HEIGHT
+  rowCountsByMonth: Record<number, number>,
+  rowHeight: number = GRID.DEFAULT_ROW_HEIGHT,
 ): MonthRowInfo[] {
   const result: MonthRowInfo[] = [];
   let yOffset = GRID.HEADER_HEIGHT;
 
   for (let m = 1; m <= 12; m++) {
-    const minRows = monthRows[m] || 3;
-    const mEntries = entriesByMonth[m] || [];
-    const maxRowIndex = mEntries.reduce((max, e) => Math.max(max, e.row_index), minRows - 1);
-    const rowCount = maxRowIndex + 1;
-
+    const rowCount = rowCountsByMonth[m] ?? 3;
     result.push({ month: m, rowCount, yOffset });
     yOffset += rowCount * rowHeight;
   }
