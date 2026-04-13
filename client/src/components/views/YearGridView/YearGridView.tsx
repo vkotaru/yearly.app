@@ -5,6 +5,7 @@ import { useSettings, computeDayWidth } from '../../../contexts/SettingsContext'
 import { useEntries } from '../../../contexts/EntriesContext';
 import {
   calculateMonthOffsets,
+  calculateCrossMonthSegments,
   GRID,
 } from '../../../utils/entryPosition';
 import MonthRow from '../../MonthRow/MonthRow';
@@ -580,50 +581,75 @@ export default function YearGridView({ year }: Props) {
 
             {move && (() => {
               const entry = move.entry;
-              const span = move.span + 1;
-              const currentDayStart = move.currentDayStart;
-              const currentMonth = move.currentMonth;
-              const currentRowIndex = move.currentRowIndex;
 
-              const monthInfo = monthOffsets.find(m => m.month === currentMonth);
-              if (!monthInfo) return null;
+              // Compute the preview entry's end position by walking `span` days
+              // forward from (currentMonth, currentDayStart), rolling into later
+              // months as needed. Stops at Dec 31 so the preview never renders
+              // outside the year.
+              let endMonth = move.currentMonth;
+              let endDay = move.currentDayStart + move.span;
+              let monthMax = getDaysInMonth(year, endMonth);
+              while (endDay > monthMax && endMonth < 12) {
+                endDay -= monthMax;
+                endMonth++;
+                monthMax = getDaysInMonth(year, endMonth);
+              }
+              if (endDay > monthMax) endDay = monthMax;
 
-              const topOffset = monthInfo.yOffset + currentRowIndex * rowHeight;
-              const leftOffset = GRID.MONTH_LABEL_WIDTH + (currentDayStart - 1) * dayWidth;
+              const previewEntry: Entry = {
+                ...entry,
+                month: move.currentMonth,
+                end_month: endMonth,
+                day_start: move.currentDayStart,
+                day_end: endDay,
+                row_index: move.currentRowIndex,
+              };
+
+              const segments = calculateCrossMonthSegments(
+                previewEntry, year, monthOffsets, rowHeight, dayWidth
+              );
 
               return (
-                <div
-                  className={styles.movingOverlay}
-                  style={{
-                    position: 'absolute',
-                    top: `${topOffset}px`,
-                    left: `${leftOffset}px`,
-                    width: `${span * dayWidth - 2}px`,
-                    height: `${rowHeight - 2}px`,
-                    backgroundColor: entry.color,
-                    borderRadius: '4px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    padding: '0 6px',
-                    cursor: 'grabbing',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
-                    zIndex: 100,
-                    pointerEvents: 'none',
-                    opacity: 0.9,
-                  }}
-                >
-                  {entry.emoji && <span style={{ marginRight: '4px' }}>{entry.emoji}</span>}
-                  <span style={{
-                    fontSize: '11px',
-                    fontWeight: 500,
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    color: '#fff',
-                  }}>
-                    {entry.title}
-                  </span>
-                </div>
+                <>
+                  {segments.map(segment => (
+                    <div
+                      key={`moving-${entry.id}-${segment.month}`}
+                      style={{
+                        position: 'absolute',
+                        top: `${segment.top}px`,
+                        left: `${segment.left}px`,
+                        width: `${segment.width}px`,
+                        height: `${segment.height}px`,
+                        backgroundColor: entry.color,
+                        borderRadius: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '0 6px',
+                        cursor: 'grabbing',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+                        zIndex: 100,
+                        pointerEvents: 'none',
+                        opacity: 0.9,
+                      }}
+                    >
+                      {segment.isStart && (
+                        <>
+                          {entry.emoji && <span style={{ marginRight: '4px' }}>{entry.emoji}</span>}
+                          <span style={{
+                            fontSize: '11px',
+                            fontWeight: 500,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            color: '#fff',
+                          }}>
+                            {entry.title}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </>
               );
             })()}
           </div>
