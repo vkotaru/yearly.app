@@ -45,19 +45,20 @@ export default function Settings({ onClose }: Props)
         </div>
 
         <div className={styles.section}>
-          <label className={styles.label}>Font Family</label>
-          <div className={styles.fontOptions}>
+          <label className={styles.label} htmlFor="fontFamilySelect">Font Family</label>
+          <select
+            id="fontFamilySelect"
+            className={styles.fontSelect}
+            style={{ fontFamily: settings.fontFamily }}
+            value={settings.fontFamily}
+            onChange={(e) => updateSettings({ fontFamily: e.target.value })}
+          >
             {FONT_OPTIONS.map((opt) => (
-              <button
-                key={opt.label}
-                className={`${styles.fontOption} ${settings.fontFamily === opt.value ? styles.active : ''}`}
-                style={{ fontFamily: opt.value }}
-                onClick={() => updateSettings({ fontFamily: opt.value })}
-              >
+              <option key={opt.label} value={opt.value} style={{ fontFamily: opt.value }}>
                 {opt.label}
-              </button>
+              </option>
             ))}
-          </div>
+          </select>
         </div>
 
         <div className={styles.section}>
