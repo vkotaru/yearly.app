@@ -664,21 +664,16 @@
   box-shadow: 0 0 0 3px var(--accent-100);
 }
 
-.quickEmojis {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  flex: 1;
-}
-
 .emojiBtn {
-  width: 28px;
-  height: 28px;
+  height: 36px;
+  padding: 0 12px;
   border: 1px solid var(--border-default);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   background: var(--bg-surface);
   cursor: pointer;
-  font-size: 14px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -688,11 +683,18 @@
 .emojiBtn:hover {
   background: var(--bg-hover);
   border-color: var(--accent-300);
+  color: var(--text-primary);
 }
 
-.emojiBtn.selected {
-  background: var(--accent-100);
-  border-color: var(--accent-500);
+.emojiPickerWrap {
+  margin-top: 10px;
+}
+
+/* Emoji picker overrides — fit our editor width */
+.emojiPickerWrap :global(.EmojiPickerReact) {
+  --epr-bg-color: var(--bg-surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
 }
 
 /* ── Travel section ── */

@@ -464,7 +464,8 @@ async function doUpdate(id: number, dto: UpdateEntryDto): Promise<Entry> {
     if (isOnline()) {
       try {
         await apiUpdateEntry(dexieEntry.serverId, dto);
-      } catch {
+      } catch (err) {
+        console.error('[doUpdate] apiUpdateEntry failed — queued for sync. dto=', dto, 'err=', err);
         await addToPendingSync('entries', 'update', dto as unknown as Record<string, unknown>, dexieEntry.localId, dexieEntry.serverId);
       }
     } else {

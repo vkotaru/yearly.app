@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import EmojiPicker, { EmojiStyle, Theme } from 'emoji-picker-react';
 import type { Entry, Comment, Todo, CreateEntryDto, UpdateEntryDto } from '../../../../shared/types';
 import { fetchComments, createComment, deleteComment, fetchTodos, createTodo, updateTodo, deleteTodo } from '../../api/entries';
 import { getDaysInMonth, getMonthName } from '../../utils/calendar';
@@ -18,12 +19,6 @@ const PRESET_COLORS = [
   '#c084fc', // purple
   '#f472b6', // pink
   '#a3a3a3', // neutral
-];
-
-// Common emojis for quick selection
-const QUICK_EMOJIS = [
-  '✈️', '🚗', '🏖️', '🏔️', '⛰️', '🌲', '🌴', '🌉', '🏄', '☀️',
-  '🥾', '🏕️', '⛷️', '🎉', '💼', '🏠', '❤️', '🎂', '📍', '⭐',
 ];
 
 // Convert hex to RGB object
@@ -106,6 +101,7 @@ export default function EntryEditor({
   const [url, setUrl] = useState(existingEntry?.url ?? '');
   const [category, setCategory] = useState(existingEntry?.category ?? '');
   const [emoji, setEmoji] = useState(existingEntry?.emoji ?? '');
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [departureTime, setDepartureTime] = useState(existingEntry?.departure_time ?? '');
   const [arrivalTime, setArrivalTime] = useState(existingEntry?.arrival_time ?? '');
 
@@ -348,21 +344,46 @@ export default function EntryEditor({
               value={emoji}
               onChange={(e) => setEmoji(e.target.value)}
               placeholder="🎯"
-              maxLength={4}
+              maxLength={16}
             />
-            <div className={styles.quickEmojis}>
-              {QUICK_EMOJIS.map((e) => (
-                <button
-                  key={e}
-                  type="button"
-                  className={`${styles.emojiBtn} ${emoji === e ? styles.selected : ''}`}
-                  onClick={() => setEmoji(e)}
-                >
-                  {e}
-                </button>
-              ))}
-            </div>
+            <button
+              type="button"
+              className={styles.emojiBtn}
+              onClick={() => setShowEmojiPicker(v => !v)}
+              title="Browse all emojis"
+            >
+              {showEmojiPicker ? 'Close' : 'Browse…'}
+            </button>
+            {emoji && (
+              <button
+                type="button"
+                className={styles.emojiBtn}
+                onClick={() => setEmoji('')}
+                title="Clear emoji"
+              >
+                Clear
+              </button>
+            )}
           </div>
+          {showEmojiPicker && (
+            <div
+              className={styles.emojiPickerWrap}
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <EmojiPicker
+                onEmojiClick={(data) => {
+                  setEmoji(data.emoji);
+                  setShowEmojiPicker(false);
+                }}
+                emojiStyle={EmojiStyle.NATIVE}
+                theme={Theme.AUTO}
+                width="100%"
+                height={360}
+                skinTonesDisabled
+                lazyLoadEmojis
+              />
+            </div>
+          )}
         </div>
 
         <div className={styles.travelSection}>
