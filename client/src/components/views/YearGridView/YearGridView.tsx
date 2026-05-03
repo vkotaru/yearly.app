@@ -618,6 +618,30 @@ export default function YearGridView({ year }: Props) {
               );
             })}
 
+            {/* Subtle outline around today's month */}
+            {(() => {
+              const now = new Date();
+              if (year !== now.getFullYear()) return null;
+              const tm = now.getMonth() + 1;
+              const monthInfo = monthOffsets.find(m => m.month === tm);
+              if (!monthInfo) return null;
+              return (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: `${monthInfo.yOffset}px`,
+                    left: 0,
+                    right: 0,
+                    height: `${monthInfo.rowCount * rowHeight}px`,
+                    border: '2px solid var(--success-500)',
+                    borderRadius: '4px',
+                    pointerEvents: 'none',
+                    zIndex: 5,
+                  }}
+                />
+              );
+            })()}
+
             <div className={styles.entryLayer}>
               {entries.map(entry => (
                 <EntryOverlay
