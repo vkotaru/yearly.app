@@ -1,12 +1,15 @@
 /**
  * Dev seed script — populates a user's calendar with sample events, trips,
- * birthdays, and anniversaries for one year. Safe to re-run with --clear.
+ * birthdays, and anniversaries for one year. Idempotent by default: deletes
+ * existing entries in the seed's categories before inserting, so re-running
+ * never creates duplicates.
  *
  * Usage:
- *   npm run seed                    # first user, current year, additive
- *   npm run seed -- --clear         # wipe year first, then seed
+ *   npm run seed                    # first user, current year (idempotent)
+ *   npm run seed -- --clear         # wipe ALL entries for year first
+ *   npm run seed -- --keep          # additive (legacy behavior)
  *   npm run seed -- --year=2027
- *   npm run seed -- --user=foo@bar.com --year=2026 --clear
+ *   npm run seed -- --user=foo@bar.com --year=2026
  */
 import db from '../src/db.js';
 
@@ -67,6 +70,7 @@ const args = process.argv.slice(2);
 const yearArg = args.find(a => a.startsWith('--year='))?.split('=')[1];
 const userArg = args.find(a => a.startsWith('--user='))?.split('=')[1];
 const clear = args.includes('--clear');
+const keep = args.includes('--keep');
 
 const year = yearArg ? parseInt(yearArg, 10) : new Date().getFullYear();
 if (!Number.isInteger(year) || year < 1970) {
@@ -97,6 +101,17 @@ if (clear) {
   // still surface old samples on the client.
   const r = db.prepare(`DELETE FROM entries WHERE user_id = ? AND year = ?`).run(user.id, year);
   console.log(`Cleared ${r.changes} existing entries`);
+} else if (!keep) {
+  // Idempotent default: only delete entries in the seed's categories so
+  // re-runs don't pile up duplicates. User's non-seed entries are preserved.
+  const seedCategories = Array.from(new Set(samples.map(s => s.category)));
+  const placeholders = seedCategories.map(() => '?').join(',');
+  const r = db.prepare(
+    `DELETE FROM entries WHERE user_id = ? AND year = ? AND category IN (${placeholders})`
+  ).run(user.id, year, ...seedCategories);
+  if (r.changes > 0) {
+    console.log(`Cleared ${r.changes} previous seed entries (${seedCategories.join(', ')})`);
+  }
 }
 
 const insert = db.prepare(`
