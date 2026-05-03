@@ -64,7 +64,9 @@ export default function YearGridView({ year }: Props) {
   const moveIntent = useRef<{ entry: Entry; startX: number } | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const mainContentRef = useRef<HTMLDivElement>(null);
+  const stickyHeaderRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
+  const [bottomPadding, setBottomPadding] = useState(20);
 
   const { settings, dayWidth: settingsDayWidth } = useSettings();
   const rowHeight = settings.gridCellSize;
@@ -107,6 +109,29 @@ export default function YearGridView({ year }: Props) {
     () => calculateMonthOffsets(monthRowCounts, rowHeight),
     [monthRowCounts, rowHeight],
   );
+
+  // Compute bottom padding so any month (incl. December) can scroll up to just
+  // below the sticky day-header. Padding = container - sticky - lastMonth.
+  useEffect(() => {
+    const main = mainContentRef.current;
+    const sticky = stickyHeaderRef.current;
+    if (!main || !sticky) return;
+
+    const compute = () => {
+      const containerHeight = main.clientHeight;
+      const stickyHeight = sticky.offsetHeight;
+      const lastMonthRows = monthRowCounts[12] ?? 0;
+      const lastMonthHeight = lastMonthRows * rowHeight;
+      setBottomPadding(Math.max(20, containerHeight - stickyHeight - lastMonthHeight));
+    };
+
+    compute();
+
+    const observer = new ResizeObserver(compute);
+    observer.observe(main);
+    observer.observe(sticky);
+    return () => observer.disconnect();
+  }, [monthRowCounts, rowHeight]);
 
   // Convert (month, day) in the current year to a linear day-of-year index
   const dayOfYear = useCallback((month: number, day: number): number => {
@@ -546,8 +571,12 @@ export default function YearGridView({ year }: Props) {
 
   return (
     <div className={styles.wrapper}>
-      <div className={styles.mainContent} ref={mainContentRef}>
-        <div className={styles.stickyHeader}>
+      <div
+        className={styles.mainContent}
+        ref={mainContentRef}
+        style={{ paddingBottom: `${bottomPadding}px` }}
+      >
+        <div className={styles.stickyHeader} ref={stickyHeaderRef}>
           <div className={styles.dayHeaderRow}>
             <div className={styles.headerLabel}>Month</div>
             {Array.from({ length: 31 }, (_, i) => {
