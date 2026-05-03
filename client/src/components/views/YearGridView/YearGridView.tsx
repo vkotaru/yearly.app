@@ -133,6 +133,32 @@ export default function YearGridView({ year }: Props) {
     return () => observer.disconnect();
   }, [monthRowCounts, rowHeight]);
 
+  // On mount: scroll today's month to the top of the view (just under the
+  // sticky day-header). Re-runs when bottomPadding settles; only marks done
+  // once the container is actually tall enough to reach the target — otherwise
+  // the browser clamps and the page stays at the top.
+  const hasScrolledToTodayRef = useRef(false);
+  useEffect(() => {
+    if (hasScrolledToTodayRef.current) return;
+    if (monthOffsets.length === 0) return;
+    const main = mainContentRef.current;
+    if (!main) return;
+    const today = new Date();
+    if (year !== today.getFullYear()) {
+      hasScrolledToTodayRef.current = true;
+      return;
+    }
+    const tm = today.getMonth() + 1;
+    const monthInfo = monthOffsets.find(m => m.month === tm);
+    if (!monthInfo) return;
+
+    const maxScrollTop = main.scrollHeight - main.clientHeight;
+    if (maxScrollTop < monthInfo.yOffset - 1) return;
+
+    main.scrollTop = monthInfo.yOffset;
+    hasScrolledToTodayRef.current = true;
+  }, [monthOffsets, bottomPadding, year]);
+
   // Convert (month, day) in the current year to a linear day-of-year index
   const dayOfYear = useCallback((month: number, day: number): number => {
     let d = 0;
