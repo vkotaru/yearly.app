@@ -159,6 +159,64 @@ export default function YearGridView({ year }: Props) {
     hasScrolledToTodayRef.current = true;
   }, [monthOffsets, bottomPadding, year]);
 
+  // Mouse-wheel: scroll one cell per tick. Throttled so trackpad inertia
+  // doesn't fire dozens of cells per swipe. Ctrl/cmd-wheel (zoom) is left alone.
+  useEffect(() => {
+    const main = mainContentRef.current;
+    if (!main) return;
+    let lastWheel = 0;
+
+    const handleWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) return;
+      e.preventDefault();
+      const now = performance.now();
+      if (now - lastWheel < 120) return;
+      lastWheel = now;
+      const dy = e.deltaY !== 0 ? Math.sign(e.deltaY) * rowHeight : 0;
+      const dx = e.deltaX !== 0 ? Math.sign(e.deltaX) * dayWidth : 0;
+      if (dx === 0 && dy === 0) return;
+      main.scrollBy({ left: dx, top: dy, behavior: 'smooth' });
+    };
+
+    main.addEventListener('wheel', handleWheel, { passive: false });
+    return () => main.removeEventListener('wheel', handleWheel);
+  }, [rowHeight, dayWidth]);
+
+  // Arrow keys: ↑/↓ scroll one row, ←/→ scroll one column (only if the grid
+  // is wider than the viewport). Ignored while typing in an input/textarea.
+  useEffect(() => {
+    const main = mainContentRef.current;
+    if (!main) return;
+
+    const isTextTarget = (el: EventTarget | null) => {
+      if (!(el instanceof HTMLElement)) return false;
+      const tag = el.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || el.isContentEditable;
+    };
+
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (isTextTarget(e.target)) return;
+
+      let dy = 0;
+      let dx = 0;
+      if (e.key === 'ArrowUp') dy = -rowHeight;
+      else if (e.key === 'ArrowDown') dy = rowHeight;
+      else if (e.key === 'ArrowLeft') dx = -dayWidth;
+      else if (e.key === 'ArrowRight') dx = dayWidth;
+      else return;
+
+      // Only honor horizontal arrows when the grid actually overflows.
+      if (dx !== 0 && main.scrollWidth <= main.clientWidth + 1) return;
+
+      e.preventDefault();
+      main.scrollBy({ left: dx, top: dy, behavior: 'smooth' });
+    };
+
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [rowHeight, dayWidth]);
+
   // Convert (month, day) in the current year to a linear day-of-year index
   const dayOfYear = useCallback((month: number, day: number): number => {
     let d = 0;
