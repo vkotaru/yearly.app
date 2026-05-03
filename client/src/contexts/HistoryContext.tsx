@@ -17,6 +17,7 @@ interface HistoryContextValue {
   registerExecutors: (onUndo: UndoExecutor, onRedo: RedoExecutor) => void;
   lastToastMessage: string | null;
   clearToast: () => void;
+  showToast: (message: string) => void;
 }
 
 const HistoryContext = createContext<HistoryContextValue | null>(null);
@@ -88,6 +89,10 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
     setLastToastMessage(null);
   }, []);
 
+  const showToast = useCallback((message: string) => {
+    setLastToastMessage(message);
+  }, []);
+
   return (
     <HistoryContext.Provider
       value={{
@@ -99,6 +104,7 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
         registerExecutors,
         lastToastMessage,
         clearToast,
+        showToast,
       }}
     >
       {children}

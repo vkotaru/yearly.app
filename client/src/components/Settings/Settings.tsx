@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSettings, FONT_OPTIONS } from '../../contexts/SettingsContext';
-import { downloadBackup, restoreBackup } from '../../api/backup';
+import { restoreBackup } from '../../api/backup';
 import styles from './Settings.module.css';
 
 interface Props
@@ -130,22 +130,6 @@ export default function Settings({ onClose }: Props)
         <div className={styles.section}>
           <label className={styles.label}>Data</label>
           <div className={styles.backupActions}>
-            <button
-              className={styles.backupBtn}
-              onClick={async () => {
-                try {
-                  setBackupStatus('Exporting...');
-                  await downloadBackup();
-                  setBackupStatus('Backup downloaded');
-                  setTimeout(() => setBackupStatus(null), 3000);
-                } catch {
-                  setBackupStatus('Export failed');
-                  setTimeout(() => setBackupStatus(null), 3000);
-                }
-              }}
-            >
-              Export Backup
-            </button>
             {!restoreConfirm ? (
               <button
                 className={`${styles.backupBtn} ${styles.restoreBtn}`}

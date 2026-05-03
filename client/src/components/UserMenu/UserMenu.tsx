@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useHistory } from '../../contexts/HistoryContext';
+import { downloadBackup } from '../../api/backup';
 import styles from './UserMenu.module.css';
 
 interface Props {
@@ -10,7 +11,7 @@ interface Props {
 
 export default function UserMenu({ user, onSettings, onLogout }: Props) {
   const [isOpen, setIsOpen] = useState(false);
-  const { canUndo, canRedo, undo, redo } = useHistory();
+  const { canUndo, canRedo, undo, redo, showToast } = useHistory();
 
   function handleSettings() {
     setIsOpen(false);
@@ -20,6 +21,16 @@ export default function UserMenu({ user, onSettings, onLogout }: Props) {
   function handleLogout() {
     setIsOpen(false);
     onLogout();
+  }
+
+  async function handleExport() {
+    setIsOpen(false);
+    try {
+      await downloadBackup();
+      showToast('Backup downloaded');
+    } catch {
+      showToast('Export failed');
+    }
   }
 
   return (
@@ -94,6 +105,15 @@ export default function UserMenu({ user, onSettings, onLogout }: Props) {
               </div>
 
               <div className={styles.divider} />
+
+              <button className={styles.menuItem} onClick={handleExport}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                <span>Export to JSON</span>
+              </button>
 
               <button className={styles.menuItem} onClick={handleSettings}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
