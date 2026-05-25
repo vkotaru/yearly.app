@@ -78,6 +78,43 @@ if (!Number.isInteger(year) || year < 1970) {
   process.exit(1);
 }
 
+// ── Generate programmatically alternate Work Weeks starting on the first Monday of the year ──
+const current = new Date(year, 0, 1);
+while (current.getDay() !== 1) { // 1 = Monday
+  current.setDate(current.getDate() + 1);
+}
+
+const WORK_WEEK_COLOR = '#8b5cf6'; // purple
+let isWorkWeek = true;
+
+while (current.getFullYear() === year) {
+  if (isWorkWeek) {
+    const start = new Date(current);
+    const end = new Date(current);
+    end.setDate(end.getDate() + 6); // 7 days (Monday - Sunday)
+
+    if (start.getFullYear() === year || end.getFullYear() === year) {
+      if (end.getFullYear() > year) {
+        end.setFullYear(year, 11, 31);
+      }
+      samples.push({
+        month: start.getMonth() + 1,
+        end_month: end.getMonth() + 1,
+        day_start: start.getDate(),
+        day_end: end.getDate(),
+        row_index: 4,
+        title: 'Work Week',
+        emoji: '💼',
+        color: WORK_WEEK_COLOR,
+        category: 'Work',
+        description: 'Alternating work week schedule'
+      });
+    }
+  }
+  current.setDate(current.getDate() + 7);
+  isWorkWeek = !isWorkWeek;
+}
+
 interface UserRow { id: number; email: string; }
 let user: UserRow | undefined;
 if (userArg) {
@@ -89,8 +126,11 @@ if (userArg) {
 } else {
   user = db.prepare('SELECT id, email FROM users ORDER BY id LIMIT 1').get() as UserRow | undefined;
   if (!user) {
-    console.error('No users in DB. Sign in to the dev app once first.');
-    process.exit(1);
+    console.log("No users found in database. Creating default 'dev-user' (dev@localhost)...");
+    db.prepare(
+      "INSERT INTO users (google_id, email, name, picture) VALUES ('dev-user', 'dev@localhost', 'Dev User', '')"
+    ).run();
+    user = db.prepare('SELECT id, email FROM users WHERE google_id = ?').get('dev-user') as UserRow | undefined;
   }
 }
 

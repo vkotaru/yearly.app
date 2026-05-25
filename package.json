@@ -9,7 +9,9 @@
     "build": "npm run build:client && npm run build:server",
     "build:client": "cd client && npm run build",
     "build:server": "cd server && npm run build",
-    "start": "cd server && npm start"
+    "start": "cd server && npm start",
+    "seed": "cd server && npm run seed",
+    "dev:setup": "./run-dev.sh"
   },
   "devDependencies": {
     "concurrently": "^9.1.0"
