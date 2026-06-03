@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { OAuth2Client } from 'google-auth-library';
 import db from '../db.js';
 import { createToken } from '../utils/jwt.js';
+import { isEmailAllowed } from '../utils/allowlist.js';
 import { requireAuth } from '../middleware/auth.js';
 import type { GoogleAuthDto, User, AuthResponse } from '../../../shared/types.js';
 
@@ -40,6 +41,13 @@ router.post('/google', async (req, res) => {
 
     if (!email || !name) {
       res.status(400).json({ error: 'Missing required user info from Google' });
+      return;
+    }
+
+    // Enforce the email allowlist. The Google client ID alone does not restrict
+    // which accounts can authenticate, so authorization must happen here.
+    if (!payload.email_verified || !isEmailAllowed(email)) {
+      res.status(403).json({ error: 'This account is not authorized to access this app.' });
       return;
     }
 

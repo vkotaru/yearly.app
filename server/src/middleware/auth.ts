@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { verifyToken } from '../utils/jwt.js';
+import { isEmailAllowed } from '../utils/allowlist.js';
 import db from '../db.js';
 import type { User } from '../../../shared/types.js';
 
@@ -30,6 +31,15 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
 
   if (!user) {
     res.status(401).json({ error: 'Unauthorized - user not found' });
+    return;
+  }
+
+  // Re-check the allowlist on every request so that revoking access (or a user
+  // who slipped in before the allowlist existed) takes effect immediately,
+  // even with a still-valid session cookie. The dev-login user is exempt.
+  if (user.google_id !== 'dev-user' && !isEmailAllowed(user.email)) {
+    res.clearCookie('auth_token');
+    res.status(403).json({ error: 'This account is not authorized to access this app.' });
     return;
   }
 
