@@ -36,6 +36,9 @@ export interface DexieEntry {
   emoji: string;
   departure_time: string;
   arrival_time: string;
+  start_time: string | null;  // 'HH:MM' time-of-day; null = all-day
+  end_time: string | null;
+  timezone: string | null;    // IANA tz for timed entries
   user_id?: number;
   is_private: boolean;
   is_tentative: boolean;

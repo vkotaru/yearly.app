@@ -16,6 +16,18 @@ function isValidUrl(url: string | undefined | null): boolean {
   }
 }
 
+// Time-of-day validation: accepts 'HH:MM' (24h) or empty/null (all-day).
+// Returns the normalized value ('' -> null) via the caller; here we just check.
+function isValidTime(t: string | null | undefined): boolean {
+  if (t == null || t === '') return true;
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(t);
+}
+
+// Empty string -> null so all-day entries store NULL rather than ''.
+function normalizeTime(t: string | null | undefined): string | null {
+  return t == null || t === '' ? null : t;
+}
+
 // Range validation for month/day fields. Returns an error message or null.
 function validateRanges(fields: {
   month?: number | null;
@@ -69,7 +81,7 @@ router.get('/:year', (req, res) => {
 // POST /api/entries — auto-set user_id
 router.post('/', (req, res) => {
   const body: CreateEntryDto = req.body;
-  const { year, month, end_month, day_start, day_end, row_index, title, description, url, color, category, emoji, departure_time, arrival_time, is_private, is_tentative } = body;
+  const { year, month, end_month, day_start, day_end, row_index, title, description, url, color, category, emoji, departure_time, arrival_time, start_time, end_time, timezone, is_private, is_tentative } = body;
 
   if (!year || !month || !day_start || !day_end || row_index == null) {
     res.status(400).json({ error: 'Missing required fields: year, month, day_start, day_end, row_index' });
@@ -106,17 +118,23 @@ router.post('/', (req, res) => {
     return;
   }
 
+  if (!isValidTime(start_time) || !isValidTime(end_time)) {
+    res.status(400).json({ error: 'start_time/end_time must be in HH:MM (24h) format' });
+    return;
+  }
+
   const userId = req.user!.id;
   const isPrivate = is_private ? 1 : 0;
   const isTentative = is_tentative ? 1 : 0;
 
   const result = db.prepare(`
-    INSERT INTO entries (year, month, end_month, day_start, day_end, row_index, title, description, url, color, category, emoji, departure_time, arrival_time, user_id, is_private, is_tentative)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO entries (year, month, end_month, day_start, day_end, row_index, title, description, url, color, category, emoji, departure_time, arrival_time, start_time, end_time, timezone, user_id, is_private, is_tentative)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     year, month, finalEndMonth, day_start, day_end, row_index,
     title ?? '', description ?? '', url ?? '', color ?? '#3b82f6', category ?? '',
     emoji ?? '', departure_time ?? '', arrival_time ?? '',
+    normalizeTime(start_time), normalizeTime(end_time), timezone ?? null,
     userId, isPrivate, isTentative
   );
 
@@ -150,6 +168,13 @@ router.put('/:id', (req, res) => {
   // Validate URL if provided
   if (body.url !== undefined && !isValidUrl(body.url)) {
     res.status(400).json({ error: 'Invalid URL: must be http:// or https://' });
+    return;
+  }
+
+  // Validate times if provided
+  if ((body.start_time !== undefined && !isValidTime(body.start_time)) ||
+      (body.end_time !== undefined && !isValidTime(body.end_time))) {
+    res.status(400).json({ error: 'start_time/end_time must be in HH:MM (24h) format' });
     return;
   }
 
@@ -190,6 +215,10 @@ router.put('/:id', (req, res) => {
   if (body.emoji != null) { updates.push('emoji = ?'); values.push(body.emoji); }
   if (body.departure_time != null) { updates.push('departure_time = ?'); values.push(body.departure_time); }
   if (body.arrival_time != null) { updates.push('arrival_time = ?'); values.push(body.arrival_time); }
+  // Times use !== undefined so an explicit null clears them (back to all-day).
+  if (body.start_time !== undefined) { updates.push('start_time = ?'); values.push(normalizeTime(body.start_time)); }
+  if (body.end_time !== undefined) { updates.push('end_time = ?'); values.push(normalizeTime(body.end_time)); }
+  if (body.timezone !== undefined) { updates.push('timezone = ?'); values.push(body.timezone ?? null); }
   if (body.is_private != null) { updates.push('is_private = ?'); values.push(body.is_private ? 1 : 0); }
   if (body.is_tentative != null) { updates.push('is_tentative = ?'); values.push(body.is_tentative ? 1 : 0); }
 

@@ -72,14 +72,15 @@ router.post('/restore', (req, res) => {
 
     for (const entry of backup.entries) {
       const result = db.prepare(`
-        INSERT INTO entries (year, month, end_month, day_start, day_end, row_index, title, description, url, color, category, emoji, departure_time, arrival_time, user_id, is_private, is_tentative, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO entries (year, month, end_month, day_start, day_end, row_index, title, description, url, color, category, emoji, departure_time, arrival_time, start_time, end_time, timezone, user_id, is_private, is_tentative, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         entry.year, entry.month, entry.end_month ?? entry.month,
         entry.day_start, entry.day_end, entry.row_index,
         entry.title ?? '', entry.description ?? '', entry.url ?? '',
         entry.color ?? '#3b82f6', entry.category ?? '',
         entry.emoji ?? '', entry.departure_time ?? '', entry.arrival_time ?? '',
+        entry.start_time ?? null, entry.end_time ?? null, entry.timezone ?? null,
         userId, entry.is_private ? 1 : 0, entry.is_tentative ? 1 : 0,
         entry.created_at ?? new Date().toISOString(),
         entry.updated_at ?? new Date().toISOString()

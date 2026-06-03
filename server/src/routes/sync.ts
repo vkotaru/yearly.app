@@ -120,14 +120,15 @@ function processEntryChange(
   if (operation === 'create') {
     const result = db.prepare(`
       INSERT INTO entries (year, month, end_month, day_start, day_end, row_index, title, description,
-        url, color, category, emoji, departure_time, arrival_time, user_id, is_private, is_tentative)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        url, color, category, emoji, departure_time, arrival_time, start_time, end_time, timezone, user_id, is_private, is_tentative)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       payload.year, payload.month, payload.end_month ?? payload.month,
       payload.day_start, payload.day_end, payload.row_index,
       payload.title ?? '', payload.description ?? '', payload.url ?? '',
       payload.color ?? '#3b82f6', payload.category ?? '',
       payload.emoji ?? '', payload.departure_time ?? '', payload.arrival_time ?? '',
+      payload.start_time || null, payload.end_time || null, payload.timezone || null,
       userId, payload.is_private ? 1 : 0, payload.is_tentative ? 1 : 0,
     );
     return { serverId: Number(result.lastInsertRowid), isNew: true };
@@ -149,7 +150,7 @@ function processEntryChange(
 
     const fields = ['month', 'end_month', 'day_start', 'day_end', 'row_index', 'title',
       'description', 'url', 'color', 'category', 'emoji', 'departure_time',
-      'arrival_time', 'is_private', 'is_tentative'];
+      'arrival_time', 'start_time', 'end_time', 'timezone', 'is_private', 'is_tentative'];
     const updates: string[] = [];
     const values: unknown[] = [];
 

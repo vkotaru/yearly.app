@@ -24,6 +24,9 @@ export interface Entry {
   emoji: string;       // emoji displayed before title
   departure_time: string; // travel departure info
   arrival_time: string;   // travel arrival info
+  start_time: string | null; // 'HH:MM' time-of-day on day_start; null = all-day
+  end_time: string | null;   // 'HH:MM' time-of-day on day_end; null = all-day
+  timezone: string | null;   // IANA tz (e.g. 'America/Los_Angeles') for timed entries
   user_id?: number;    // owner (null for legacy entries)
   is_private: boolean; // false = shared, true = only creator sees it
   is_tentative: boolean; // true = tentative/unconfirmed plan
@@ -57,6 +60,9 @@ export interface CreateEntryDto {
   emoji?: string;
   departure_time?: string;
   arrival_time?: string;
+  start_time?: string | null;
+  end_time?: string | null;
+  timezone?: string | null;
   is_private?: boolean;
   is_tentative?: boolean;
 }
@@ -75,6 +81,9 @@ export interface UpdateEntryDto {
   emoji?: string;
   departure_time?: string;
   arrival_time?: string;
+  start_time?: string | null;
+  end_time?: string | null;
+  timezone?: string | null;
   is_private?: boolean;
   is_tentative?: boolean;
 }

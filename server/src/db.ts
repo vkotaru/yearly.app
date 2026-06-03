@@ -108,6 +108,20 @@ if (!entryColNames.includes('end_month')) {
   } catch { /* exists */ }
 }
 
+// ── Migrate entries: add optional time-of-day ──
+// start_time/end_time are 'HH:MM' (24h) and apply to day_start/day_end.
+// NULL on both = an all-day entry (the default). timezone is an IANA name
+// (e.g. 'America/Los_Angeles') stored on timed entries so they're unambiguous.
+if (!entryColNames.includes('start_time')) {
+  try { db.exec(`ALTER TABLE entries ADD COLUMN start_time TEXT DEFAULT NULL`); } catch { /* exists */ }
+}
+if (!entryColNames.includes('end_time')) {
+  try { db.exec(`ALTER TABLE entries ADD COLUMN end_time TEXT DEFAULT NULL`); } catch { /* exists */ }
+}
+if (!entryColNames.includes('timezone')) {
+  try { db.exec(`ALTER TABLE entries ADD COLUMN timezone TEXT DEFAULT NULL`); } catch { /* exists */ }
+}
+
 // ── Migrate comments: add user_id ──
 const commentCols = db.prepare("PRAGMA table_info(comments)").all() as { name: string }[];
 const commentColNames = commentCols.map((c) => c.name);
