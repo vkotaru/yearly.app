@@ -159,29 +159,6 @@ export default function YearGridView({ year }: Props) {
     hasScrolledToTodayRef.current = true;
   }, [monthOffsets, bottomPadding, year]);
 
-  // Mouse-wheel: scroll one cell per tick. Throttled so trackpad inertia
-  // doesn't fire dozens of cells per swipe. Ctrl/cmd-wheel (zoom) is left alone.
-  useEffect(() => {
-    const main = mainContentRef.current;
-    if (!main) return;
-    let lastWheel = 0;
-
-    const handleWheel = (e: WheelEvent) => {
-      if (e.ctrlKey || e.metaKey) return;
-      e.preventDefault();
-      const now = performance.now();
-      if (now - lastWheel < 120) return;
-      lastWheel = now;
-      const dy = e.deltaY !== 0 ? Math.sign(e.deltaY) * rowHeight : 0;
-      const dx = e.deltaX !== 0 ? Math.sign(e.deltaX) * dayWidth : 0;
-      if (dx === 0 && dy === 0) return;
-      main.scrollBy({ left: dx, top: dy, behavior: 'smooth' });
-    };
-
-    main.addEventListener('wheel', handleWheel, { passive: false });
-    return () => main.removeEventListener('wheel', handleWheel);
-  }, [rowHeight, dayWidth]);
-
   // Arrow keys: ↑/↓ scroll one row, ←/→ scroll one column (only if the grid
   // is wider than the viewport). Ignored while typing in an input/textarea.
   useEffect(() => {
